@@ -22,6 +22,16 @@ trap 'rm -rf "$WORK"' EXIT
 VER=$(sed -n 's/^version=//p' "$SRC/library.properties")
 STAMP=$(git describe --always --dirty=+ 2>/dev/null || echo unknown)
 
+# What gets published is the committed tree, not the working one, so that
+# what is public is always something with a commit behind it. Which means an
+# uncommitted change here would be skipped in silence - and it said "nothing
+# to publish" once while a new file sat unstaged beside it.
+if [ -n "$(git status --porcelain -- "$SRC")" ]; then
+    echo "$SRC has uncommitted changes. Commit them first:" >&2
+    git status --short -- "$SRC" >&2
+    exit 1
+fi
+
 git clone -q "https://github.com/$REPO.git" "$WORK/repo"
 cd "$WORK/repo"
 
