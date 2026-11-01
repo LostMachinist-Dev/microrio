@@ -1,0 +1,104 @@
+# MicroRIO wire protocol — single source of truth.
+#
+# Both the Rust constants (microrio-proto/build.rs) and the C++ header
+# (arduino/MicroRIO/src/MicroRIO_protocol.h) are generated from this file.
+# Never hand-edit either output; edit this and regenerate.
+
+[protocol]
+version = 2
+magic   = 0x4D52          # "MR", sent as two bytes: 0x4D then 0x52
+header_len = 12
+
+# Header layout, little-endian, no padding:
+#   u16 magic
+#   u8  version
+#   u8  msg_type
+#   u16 node_id
+#   u32 schema_hash
+#   u16 seq
+
+[limits]
+str_len            = 32     # fixed width of a str channel, bytes
+max_name_len       = 24     # longest channel or node name, bytes
+default_max_frame  = 1400   # station default; nodes advertise their own
+min_max_frame      = 128    # smallest a node may advertise
+default_rate_hz    = 50
+default_watchdog_ms = 200   # node: no control frame for this long -> fault
+default_ui_stale_ms = 250   # station: UI heartbeat older than this -> fault
+default_history    = 8      # records a Mega/ESP32 node keeps for backfill; an Uno keeps 1
+
+# Bodies (after the 12-byte header), protocol version 2:
+#
+#   CONTROL  u32 host_time_us | u8 state | u8 flags | u16 rate_hz
+#            u32 ack_record   | control payload
+#     rate_hz     telemetry rate the node should send at; 0 = the sketch's own
+#     ack_record  highest record the station holds with nothing missing below
+#                 it (records it gave up on count as held); 0 = none yet
+#
+#   TELEM    u32 echo_host_time_us | u8 state | u8 flags | u16 rate_hz
+#            u32 newest_record | u8 count | count x record, newest first
+#     record      u32 node_time_us | telemetry payload
+#     The records are newest_record, newest_record-1, ... contiguous.
+#
+#   SCHEMA chunk 0 node info: u16 rate_hz | u16 max_frame | u16 total_channels
+#            u8 history | u8 name_len | name
+#     history     records the node can resend; 1 = no backfill
+
+[frame]
+# Fixed widths of the bodies described above, before any payload.
+control_fixed = 12   # host_time, state, flags, rate, ack_record
+telem_fixed   = 13   # echo, state, flags, rate, newest_record, count
+record_fixed  = 4    # node_time_us at the head of each telemetry record
+
+[msg_type]
+schema_req = 1   # station -> node   : u16 chunk_index
+schema     = 2   # node -> station   : schema chunk
+control    = 3   # station -> node   : control frame
+telem      = 4   # node -> station   : telemetry frame
+
+[chan_type]
+# wire sizes in bytes; bool is bitpacked separately
+bool = { code = 0, size = 0 }
+i32  = { code = 1, size = 4 }
+f32  = { code = 2, size = 4 }
+str  = { code = 3, size = 32 }
+cmd  = { code = 4, size = 2 }
+
+[dir]
+telemetry = 0    # node -> station. Displayed on the GUI.
+control   = 1    # station -> node. Populated by the GUI.
+
+[state]
+disabled = 0
+enabled  = 1
+estop    = 2
+fault    = 3
+
+[control_flags]
+# control frame flag bits. The field already existed and was ignored inbound,
+# so using it needs no version bump.
+#
+# view_only: this station is watching, not driving. The node never takes
+# ownership from such a frame and never applies its values, but it does send
+# telemetry back to it — and it does obey an ESTOP, because a watcher being
+# able to stop the machine is worth more than the tidiness of the rule.
+view_only = 0x01
+
+[flags]
+# telem frame flag bits
+watchdog_tripped = 0x01
+never_linked     = 0x02
+schema_dirty     = 0x04
+# Another station tried to control this node while it belonged to someone
+# else. A spare bit in an existing field, so this needs no version bump: old
+# firmware never sets it, an old station ignores it.
+station_conflict = 0x08
+
+[hash]
+# FNV-1a 32-bit over the canonical schema description.
+# Fed, for each channel in declaration order: dir, ctype, slot (LE u16), name bytes.
+# Node id, rate and max_frame are deliberately excluded: two identical boards
+# with different ids have the same schema.
+algorithm   = "fnv1a32"
+fnv_offset  = 0x811C9DC5
+fnv_prime   = 0x01000193

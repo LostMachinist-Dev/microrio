@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GIGA Instrument Panel</title>
+
+<style>
+/* ============================
+   GLOBAL FONT + LAYOUT
+   ============================ */
+body {
+    margin: 0;
+    padding: 0;
+    background: #111;
+    color: #eee;
+
+    /* Instrument-grade font stack */
+    font-family:
+        "Bahnschrift",
+        "DIN Alternate",
+        "DIN Condensed",
+        "Segoe UI",
+        sans-serif;
+
+    display: block;   /* <-- important: no flex here */
+    height: 100vh;
+    overflow: hidden;
+}
+
+#titleRow {
+    display: flex;
+    width: 100%;
+}
+
+#leftTitle, #rightTitle {
+    width: 50%;
+    padding: 16px 20px 4px 20px;
+    box-sizing: border-box;
+
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+
+    color: #eee;
+    background: #111;
+    border-bottom: 2px solid #333;
+}
+
+/* ============================
+   FLEX ROW FOR PANELS
+   ============================ */
+#panelRow {
+    display: flex;
+    height: calc(100vh - 50px); /* subtract title height */
+}
+
+/* ============================
+   LEFT 50% GRID
+   ============================ */
+#leftPanel {
+    width: 50%;
+    height: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+
+    display: grid;
+
+    /* 8 columns: bool, dbl name, raw, scaled, slope, offset, str name, str val */
+    grid-template-columns:
+        10%   /* bool name */
+        15%   /* dbl name */
+        10%   /* dbl raw */
+        10%   /* dbl scaled */
+        5%    /* slope */
+        5%    /* offset */
+        15%   /* string name */
+        25%;  /* string value */
+
+    gap: 4px;
+}
+
+/* ============================
+   RIGHT 50% GRID
+   ============================ */
+#rightPanel {
+    width: 50%;
+    height: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+    border-left: 1px solid #333;
+    overflow-y: auto;
+
+    display: grid;
+
+    /* 9 columns: bool name, bool LED, dbl name, dbl val, inc, min, max, str name, str val */
+    grid-template-columns:
+        10%   /* bool name */
+        5%    /* bool LED */
+        15%   /* dbl name */
+        10%   /* dbl value */
+        5%    /* increment */
+        5%    /* min */
+        5%    /* max */
+        15%   /* string name */
+        15%;  /* string value */
+
+    gap: 4px;
+}
+
+/* ============================
+   UNIFIED CELL STYLE
+   ============================ */
+.header-cell {
+    background: #222;
+    border: 1px solid #555;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    color: #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.cell {
+    background: #181818;
+    border: 1px solid #333;
+    padding: 4px 6px;
+    font-size: 12px;
+    border-radius: 4px;
+    height: 22px;
+
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+/* Inputs share the same style */
+.cell input {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    color: #eee;
+    padding: 0 4px;
+    font-size: inherit;
+    border-radius: 0;
+    box-sizing: border-box;
+}
+
+/* ============================
+   BOOL LED HIGHLIGHT
+   ============================ */
+.bool-high {
+    background: #4f0 !important;
+    border-color: #8f8 !important;
+}
+
+.bool-high input {
+    color: #000 !important;
+    font-weight: bold;
+}
+
+/* ============================
+   MUTED FORMATTING
+   ============================ */
+.input-muted {
+    color: #888 !important;
+}
+
+.cell-muted {
+    color: #888 !important;
+}
+
+/* (Separators exist but unused — safe to keep) */
+.sep-left {
+    border-left: 2px solid #444 !important;
+}
+
+.sep-right {
+    border-right: 2px solid #444 !important;
+}
+.inc-wrapper {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.inc-btn {
+    width: 10px;
+    background: #222;
+    border: 1px solid #444;
+    color: #ccc;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+
+.inc-btn:hover {
+    background: #333;
+}
+
+.inc-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #eee;
+    text-align: center;
+}
+.led-cell {
+    cursor: pointer;
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.led-off {
+    background: #300;
+    border-color: #600;
+}
+
+.led-on {
+    background: rgb(218, 48, 5);
+    border-color: #8f8;
+}
+
+
+</style>
+</head>
+
+<body>
+<button onclick="openJsonViewer()">Open JSON Viewer</button>
+
+<!-- ============================
+     TITLE ABOVE LEFT PANEL
+     ============================ -->
+
+     <div id="titleRow">
+    <div id="leftTitle">Data from Controller</div>
+    <div id="rightTitle">Data to Controller</div>
+</div>
+
+
+<!-- ============================
+     FLEX ROW CONTAINING PANELS
+     ============================ -->
+<div id="panelRow">
+
+    <!-- ============================
+         LEFT 50% GRID
+         ============================ -->
+    <div id="leftPanel">
+
+        <!-- LEFT PANEL HEADERS -->
+        <div class="header-cell">Bool</div>
+        <div class="header-cell">Dbl Name</div>
+        <div class="header-cell">Raw</div>
+        <div class="header-cell">Scaled</div>
+        <div class="header-cell">Slope</div>
+        <div class="header-cell">Offset</div>
+        <div class="header-cell">Str Name</div>
+        <div class="header-cell">Str Val</div>
+
+        <!-- JS will generate the remaining rows -->
+    </div>
+
+    <!-- ============================
+         RIGHT 50% CONTROLS
+         ============================ -->
+    <div id="rightPanel">
+            <!-- RIGHT PANEL HEADERS -->
+        <div class="header-cell">Bool Name</div>
+        <div class="header-cell">LED</div>
+        <div class="header-cell">Dbl Name</div>
+        <div class="header-cell">Value</div>
+        <div class="header-cell">Inc</div>
+        <div class="header-cell">Min</div>
+        <div class="header-cell">Max</div>
+        <div class="header-cell">Str Name</div>
+        <div class="header-cell">Str Val</div>
+
+    </div>
+    
+
+</div>
+<script>
+/* ============================================================
+   BUILD GRID ROWS
+   ============================================================ */
+
+//-------------------- LEFT PANEL (TELEMETRY) ----------------------------
+const left = document.getElementById("leftPanel");
+
+for (let i = 0; i < 32; i++) {
+
+    left.innerHTML += `
+        <div class="cell sep-right" id="bool_cell_${i}">
+            <input id="bool_name_${i}" value="B${i}">
+        </div>`;
+
+    left.innerHTML += `
+        <div class="cell input-muted">
+            <input class="input-muted" id="dbl_name_${i}" value="D${i}">
+        </div>`;
+
+    left.innerHTML += `
+        <div class="cell cell-muted" id="dbl_raw_${i}">0</div>`;
+
+    left.innerHTML += `
+        <div class="cell" id="dbl_scaled_${i}">0</div>`;
+
+    left.innerHTML += `
+        <div class="cell input-muted">
+            <input class="input-muted" id="slope_${i}" value="1">
+        </div>`;
+
+    left.innerHTML += `
+        <div class="cell input-muted sep-right">
+            <input class="input-muted" id="offset_${i}" value="0">
+        </div>`;
+
+    left.innerHTML += `
+        <div class="cell input-muted">
+            <input class="input-muted" id="str_name_${i}" value="S${i}">
+        </div>`;
+
+    left.innerHTML += `
+        <div class="cell" id="str_val_${i}">-</div>`;
+}
+
+
+//-------------------- RIGHT PANEL (CONTROLS) ----------------------------
+const right = document.getElementById("rightPanel");
+
+for (let i = 0; i < 32; i++) {
+
+    right.innerHTML += `
+        <div class="cell"><input id="ctrl_bool_name_${i}" value="CB${i}"></div>`;
+
+    right.innerHTML += `
+        <div class="led-cell led-off" id="ctrl_bool_${i}" onclick="toggleCtrlBool(${i})"></div>`;
+
+    right.innerHTML += `
+        <div class="cell"><input id="ctrl_dbl_name_${i}" value="CD${i}"></div>`;
+
+    right.innerHTML += `
+        <div class="cell">
+            <div class="inc-wrapper">
+                <div class="inc-btn" onclick="ctrlDec(${i})">-</div>
+                <input class="inc-input" id="ctrl_dbl_val_${i}" value="0">
+                <div class="inc-btn" onclick="ctrlInc(${i})">+</div>
+            </div>
+        </div>`;
+
+    right.innerHTML += `
+        <div class="cell"><input id="ctrl_inc_${i}" value="1"></div>`;
+
+    right.innerHTML += `
+        <div class="cell"><input id="ctrl_min_${i}" value="0"></div>`;
+
+    right.innerHTML += `
+        <div class="cell"><input id="ctrl_max_${i}" value="100"></div>`;
+
+    right.innerHTML += `
+        <div class="cell"><input id="ctrl_str_name_${i}" value="CS${i}"></div>`;
+
+    right.innerHTML += `
+        <div class="cell"><input id="ctrl_str_val_${i}" value="-"></div>`;
+}
+
+
+/* ============================================================
+   CONTROL BUTTON HANDLERS
+   ============================================================ */
+
+function ctrlInc(i) {
+    const valEl = document.getElementById(`ctrl_dbl_val_${i}`);
+
+    let inc = parseFloat(document.getElementById(`ctrl_inc_${i}`).value);
+    let max = parseFloat(document.getElementById(`ctrl_max_${i}`).value);
+    let v   = parseFloat(valEl.value);
+
+    if (isNaN(inc)) inc = 1;
+    if (isNaN(max)) max = Infinity;
+    if (isNaN(v))   v = 0;
+
+    v = Math.min(v + inc, max);
+    valEl.value = v;
+}
+
+function ctrlDec(i) {
+    const valEl = document.getElementById(`ctrl_dbl_val_${i}`);
+
+    let inc = parseFloat(document.getElementById(`ctrl_inc_${i}`).value);
+    let min = parseFloat(document.getElementById(`ctrl_min_${i}`).value);
+    let v   = parseFloat(valEl.value);
+
+    if (isNaN(inc)) inc = 1;
+    if (isNaN(min)) min = -Infinity;
+    if (isNaN(v))   v = 0;
+
+    v = Math.max(v - inc, min);
+    valEl.value = v;
+}
+
+function toggleCtrlBool(i) {
+    const el = document.getElementById(`ctrl_bool_${i}`);
+    const isOn = el.classList.contains("led-on");
+
+    el.classList.toggle("led-on", !isOn);
+    el.classList.toggle("led-off", isOn);
+}
+
+
+/* ============================================================
+   WEBSOCKET TELEMETRY UPDATE (INBOUND)
+   ============================================================ */
+
+const ws = new WebSocket("ws://localhost:8080");
+
+ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+
+    if (msg.type !== "arduino") return;
+
+    const data = msg.data;
+
+    data.bools.forEach((v, i) => {
+        const cell = document.getElementById(`bool_cell_${i}`);
+        if (!cell) return;
+        cell.classList.toggle("bool-high", v === true || v === 1);
+    });
+
+    data.doubles.forEach((v, i) => {
+        const rawEl = document.getElementById(`dbl_raw_${i}`);
+        const scaledEl = document.getElementById(`dbl_scaled_${i}`);
+        const slope = parseFloat(document.getElementById(`slope_${i}`).value) || 0;
+        const offset = parseFloat(document.getElementById(`offset_${i}`).value) || 0;
+
+        rawEl.textContent = v.toFixed(3);
+        scaledEl.textContent = (v * slope + offset).toFixed(3);
+    });
+
+    data.strings.forEach((v, i) => {
+        const el = document.getElementById(`str_val_${i}`);
+        if (el) el.textContent = v;
+    });
+};
+
+
+/* ============================================================
+   GAMEPAD NAME → INPUT BINDING MAP
+   ============================================================ */
+
+const gpMap = {};
+for (let a = 0; a < 16; a++) gpMap[`GPA${a}`] = { type: "axis", index: a };
+for (let b = 0; b < 16; b++) gpMap[`GPB${b}`] = { type: "button", index: b };
+
+
+/* ============================================================
+   APPLY JOYSTICK VALUES TO CONTROLS
+   ============================================================ */
+
+function applyJoystickToControls(joy) {
+    if (!joy) return;
+
+    for (let i = 0; i < 32; i++) {
+
+        const dblName = document.getElementById(`ctrl_dbl_name_${i}`).value.trim();
+        const dblMap = gpMap[dblName];
+
+        if (dblMap && dblMap.type === "axis") {
+            let raw = joy.axes[dblMap.index] ?? 0;
+
+            const min = parseFloat(document.getElementById(`ctrl_min_${i}`).value);
+            const max = parseFloat(document.getElementById(`ctrl_max_${i}`).value);
+
+            if (!isNaN(min)) raw = Math.max(raw, min);
+            if (!isNaN(max)) raw = Math.min(raw, max);
+
+            document.getElementById(`ctrl_dbl_val_${i}`).value = raw;
+        }
+
+        const boolName = document.getElementById(`ctrl_bool_name_${i}`).value.trim();
+        const boolMap = gpMap[boolName];
+
+        if (boolMap && boolMap.type === "button") {
+            const pressed = joy.buttons[boolMap.index]?.pressed ?? false;
+            const el = document.getElementById(`ctrl_bool_${i}`);
+
+            el.classList.toggle("led-on", pressed);
+            el.classList.toggle("led-off", !pressed);
+        }
+    }
+}
+
+
+/* ============================================================
+   BROWSER GAMEPAD POLLING (30 ms)
+   ============================================================ */
+
+function pollGamepad() {
+    const gp = navigator.getGamepads()[0];
+    if (gp) applyJoystickToControls(gp);
+}
+setInterval(pollGamepad, 30);
+
+
+/* ============================================================
+   OUTBOUND CONTROL PACKET (GUI → Node)
+   ============================================================ */
+
+function collectOutputs() {
+    const out = {
+        c_bools:   new Array(32),
+        c_doubles: new Array(32),
+        c_strings: new Array(32)
+    };
+
+    for (let i = 0; i < 32; i++) {
+
+        out.c_bools[i] =
+            document.getElementById(`ctrl_bool_${i}`).classList.contains("led-on") ? 1 : 0;
+
+        const v = parseFloat(document.getElementById(`ctrl_dbl_val_${i}`).value);
+        out.c_doubles[i] = isNaN(v) ? 0 : v;
+
+        out.c_strings[i] =
+            document.getElementById(`ctrl_str_val_${i}`).value;
+    }
+
+    return out;
+}
+
+
+/* ============================================================
+   FIXED-RATE OUTBOUND CONTROL LOOP (20 Hz)
+   ============================================================ */
+
+function sendControlFrame() {
+    const packet = {
+        type: "controls",
+        data: collectOutputs()
+    };
+    ws.send(JSON.stringify(packet));
+}
+
+setInterval(sendControlFrame, 50); // 20 Hz
+
+
+</script>

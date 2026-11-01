@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GIGA Instrument Panel</title>
+
+    <!-- ============================================================
+         GLOBAL STYLES (Dark theme, fonts, layout)
+         ============================================================ -->
+    <style>
+        body {
+            background: #111;
+            color: #ddd;
+            font-family: "Bahnschrift", "DIN Alternate", sans-serif;
+            padding: 20px;
+        }
+
+        /* Pull the main header up and tighten spacing */
+        h1 {
+            margin-top: 0;
+            margin-bottom: 4px;
+        }
+
+        /* Tighten section headers (Boolean Indicators / String Values) */
+        h2 {
+            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+
+
+/* String rows already use 6px spacing */
+.string-row {
+    margin-bottom: 6px;
+}
+
+        /* ------------------------------------------------------------
+           SAVE/LOAD BUTTONS (top-right)
+           ------------------------------------------------------------ */
+        .names-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background: #222;
+            color: #ddd;
+            border: 1px solid #444;
+            padding: 8px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #333;
+        }
+
+        /* ------------------------------------------------------------
+           TWO-COLUMN LAYOUT (bools left, strings right)
+           ------------------------------------------------------------ */
+        .main-columns {
+            display: flex;
+            width: 100%;
+            margin-top: 0;
+        }
+
+        .left-panel {
+            width: 50%;
+        }
+
+        .right-panel {
+            width: 50%;
+        }
+
+        /* ------------------------------------------------------------
+           BOOL LED GRID (compact)
+           ------------------------------------------------------------ */
+        .bool-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 columns */
+            gap: 6px 20px; /* vertical spacing, horizontal spacing */
+            margin-top: 0;
+        }
+
+        .bool-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 0px; /* compact spacing */
+        }
+
+        .bool-label {
+            width: 120px;
+            font-size: 14px;
+            color: #ddd;
+            background: #222;
+            border: 1px solid #444;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+
+        .led {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            background: #222;
+            border: 2px solid #444;
+            box-shadow: inset 0 0 6px #000;
+            transition: background 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .led.on {
+            background: #0f0;
+            border-color: #6f6;
+            box-shadow: 0 0 8px #0f0;
+        }
+
+        /* ------------------------------------------------------------
+           STRING PANEL (8 strings)
+           ------------------------------------------------------------ */
+        .string-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px; /* compact */
+        }
+
+        .string-label {
+            width: 120px;
+            font-size: 14px;
+            color: #ddd;
+            background: #222;
+            border: 1px solid #444;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+
+        .string-value {
+            width: 100ch; /* 100 characters wide */
+            font-size: 14px;
+            color: #ddd;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+        /* Three-column layout for doubles / floats / ints */
+        .numeric-columns {
+            display: flex;
+            width: 100%;
+            margin-top: 10px;
+            gap: 20px;
+            justify-content: flex-start; /* aligns all panels left */
+
+        }
+
+        /* Each datatype column */
+        .numeric-panel {
+            width: 25%;
+        }
+
+        /* Header row */
+        .numeric-header {
+            display: grid;
+            grid-template-columns: 120px 80px 80px 80px 80px;
+            gap: 6px;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        /* One row of numeric data */
+        .numeric-row {
+            display: grid;
+            grid-template-columns: 120px 80px 80px 80px 80px;
+            gap: 6px;
+            margin-bottom: 6px; /* matches bool/string spacing */
+        }
+
+        /* Inputs */
+        .numeric-name,
+        .numeric-raw,
+        .numeric-eu,
+        .numeric-slope,
+        .numeric-offset {
+            font-size: 14px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #222;
+            color: #ddd;
+        }
+
+        /* Read-only fields */
+        .numeric-raw{
+            background: #1a1a1a;
+            color: #777;   /* slightly grey */
+        }
+        .numeric-eu {
+            background: #1a1a1a;
+            color: #ddd;
+            font-weight: bold;
+        }
+        /* Chart enable LED */
+        .chart-led {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            background: #222;
+            border: 2px solid #444;
+            cursor: pointer;
+            box-shadow: inset 0 0 6px #000;
+        }
+
+        .chart-led.on {
+            background: rgb(141, 2, 2);
+            border-color: rgb(124, 48, 48);
+            box-shadow: 0 0 10px rgb(114, 1, 1);
+        }
+
+
+        /* Axis selector button */
+        .axis-btn {
+            width: 28px;
+            height: 24px;
+            background: #222;
+            color: #ddd;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-align: center;
+            padding: 0;
+        }
+
+        .axis-btn:hover {
+            background: #333;
+        }
+
+        /* Updated grid layout */
+        .numeric-header,
+        .numeric-row {
+            display: grid;
+            grid-template-columns: 
+                20px   /* LED */
+                28px   /* L/R */
+                110px  /* Name */
+                70px   /* Raw */
+                70px   /* EU */
+                60px   /* Slope */
+                60px;  /* Offset */
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+        .active-channels-panel {
+            width: 25%;
+            margin-left: 20px;
+        }
+
+        .active-channel-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .active-color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+
+
+    </style>
+</head>
+
+<body>
+
+    <!-- ============================================================
+         PAGE HEADER
+         ============================================================ -->
+    <h1>GIGA Instrument Panel</h1>
+
+    <!-- ============================================================
+         SAVE / LOAD NAMES (top-right)
+         ============================================================ -->
+    <div class="names-controls">
+        <button id="saveNames">Save Names</button>
+        <button id="saveOffsets">Save Offsets</button>
+        <input type="file" id="loadFile" style="display:none;">
+        <button id="loadFileBtn">Load File</button>
+    </div>
+
+
+    <!-- ============================================================
+         TWO-COLUMN MAIN LAYOUT
+         ============================================================ -->
+    <div class="main-columns">
+
+        <!-- ================= LEFT: BOOL PANEL ================= -->
+        <div class="left-panel">
+            <h2>Boolean Indicators</h2>
+            <div id="boolGrid" class="bool-grid"></div>
+        </div>
+
+        <!-- ================= RIGHT: STRING PANEL ================= -->
+        <div class="right-panel">
+            <h2>String Values</h2>
+            <div id="stringPanel"></div>
+        </div>
+
+    </div>
+    <!-- ============================================================
+        ANALOG / NUMERIC PANELS (Doubles, Floats, Ints)
+        ============================================================ -->
+    <div class="numeric-columns">
+
+        <!-- ================= DOUBLES ================= -->
+        <div class="numeric-panel">
+            <h2>Doubles</h2>
+
+        <div class="numeric-header">
+            <div class="col-chart"></div>
+            <div class="col-axis"></div>
+            <div class="col-name">Name</div>
+            <div class="col-raw">Raw</div>
+            <div class="col-eu">EU</div>
+            <div class="col-slope">Slope</div>
+            <div class="col-offset">Offset</div>
+        </div>
+
+
+            <div id="doublePanel"></div>
+        </div>
+
+        <!-- ================= FLOATS ================= -->
+        <div class="numeric-panel">
+            <h2>Floats</h2>
+
+        <div class="numeric-header">
+            <div class="col-chart"></div>   <!-- LED column -->
+            <div class="col-axis"></div>    <!-- L/R column -->
+            <div class="col-name">Name</div>
+            <div class="col-raw">Raw</div>
+            <div class="col-eu">EU</div>
+            <div class="col-slope">Slope</div>
+            <div class="col-offset">Offset</div>
+        </div>
+
+
+            <div id="floatPanel"></div>
+        </div>
+
+        <!-- ================= INTS ================= -->
+        <div class="numeric-panel">
+            <h2>Ints</h2>
+
+        <div class="numeric-header">
+            <div class="col-chart"></div>   <!-- LED column -->
+            <div class="col-axis"></div>    <!-- L/R column -->
+            <div class="col-name">Name</div>
+            <div class="col-raw">Raw</div>
+            <div class="col-eu">EU</div>
+            <div class="col-slope">Slope</div>
+            <div class="col-offset">Offset</div>
+        </div>
+
+
+            <div id="intPanel"></div>
+        </div>
+        <div class="active-channels-panel">
+            <h2>Active Channels</h2>
+            <div id="activeChannelList"></div>
+        </div>
+
+
+</div>
+    <!-- ============================================================
+         JAVASCRIPT SECTION
+         ============================================================ -->
+    <script>
+
+        /* ------------------------------------------------------------
+           CONNECT TO NODE.JS WEBSOCKET SERVER
+           ------------------------------------------------------------ */
+        const ws = new WebSocket("ws://localhost:8080");
+
+        ws.onopen = () => console.log("WebSocket connected");
+        ws.onerror = (err) => console.log("WebSocket error:", err);
+
+
+        /* ------------------------------------------------------------
+           BUILD THE 32 BOOL LED GRID
+           ------------------------------------------------------------ */
+        const boolGrid = document.getElementById("boolGrid");
+        const boolElements = [];
+        const nameInputs = [];
+
+        for (let i = 0; i < 32; i++) {
+            const item = document.createElement("div");
+            item.className = "bool-item";
+
+            const label = document.createElement("input");
+            label.className = "bool-label";
+            label.type = "text";
+            label.value = "Bool " + i;
+            label.dataset.index = i;
+
+            const led = document.createElement("div");
+            led.className = "led";
+
+            item.appendChild(label);
+            item.appendChild(led);
+            boolGrid.appendChild(item);
+
+            boolElements.push(led);
+            nameInputs.push(label);
+        }
+
+
+        /* ------------------------------------------------------------
+           STRING PANEL (8 strings)
+           ------------------------------------------------------------ */
+        const stringPanel = document.getElementById("stringPanel");
+        const stringLabels = [];
+        const stringValues = [];
+
+        const STRING_COUNT = 8;
+
+        for (let i = 0; i < STRING_COUNT; i++) {
+            const row = document.createElement("div");
+            row.className = "string-row";
+
+            const label = document.createElement("input");
+            label.className = "string-label";
+            label.type = "text";
+            label.value = "String " + i;
+            label.dataset.index = i;
+
+            const value = document.createElement("input");
+            value.className = "string-value";
+            value.type = "text";
+            value.readOnly = true;
+
+            row.appendChild(label);
+            row.appendChild(value);
+            stringPanel.appendChild(row);
+
+            stringLabels.push(label);
+            stringValues.push(value);
+        }
+        /* ------------------------------------------------------------
+           Doubles, floats, and ints
+           ------------------------------------------------------------ */
+            const DOUBLE_COUNT = 16;
+            const FLOAT_COUNT = 16;
+            const INT_COUNT = 16;
+
+function createNumericRow(index, panelElement, arrays) {
+    const row = document.createElement("div");
+    row.className = "numeric-row";
+
+    // --- Chart enable LED ---
+    const chartLed = document.createElement("div");
+    chartLed.className = "chart-led";
+    chartLed.dataset.enabled = "0"; // off by default
+    chartLed.onclick = () => {
+        const enabled = chartLed.dataset.enabled === "1";
+        chartLed.dataset.enabled = enabled ? "0" : "1";
+        chartLed.classList.toggle("on", !enabled);
+        updateActiveChannelList();
+    };
+
+    // --- Axis selector ---
+    const axisBtn = document.createElement("button");
+    axisBtn.className = "axis-btn";
+    axisBtn.textContent = "L";
+    axisBtn.dataset.axis = "L";
+    axisBtn.onclick = () => {
+        axisBtn.dataset.axis = axisBtn.dataset.axis === "L" ? "R" : "L";
+        axisBtn.textContent = axisBtn.dataset.axis;
+        updateActiveChannelList();
+    };
+
+    // --- Name ---
+    const name = document.createElement("input");
+    name.className = "numeric-name";
+    name.type = "text";
+    name.value = `${arrays.labelPrefix} ${index}`;
+
+    // --- Raw ---
+    const raw = document.createElement("input");
+    raw.className = "numeric-raw";
+    raw.type = "text";
+    raw.readOnly = true;
+
+    // --- EU ---
+    const eu = document.createElement("input");
+    eu.className = "numeric-eu";
+    eu.type = "text";
+    eu.readOnly = true;
+
+    // --- Slope ---
+    const slope = document.createElement("input");
+    slope.className = "numeric-slope";
+    slope.type = "number";
+    slope.value = "1.0";
+
+    // --- Offset ---
+    const offset = document.createElement("input");
+    offset.className = "numeric-offset";
+    offset.type = "number";
+    offset.value = "0.0";
+
+    // Append in order
+    row.appendChild(chartLed);
+    row.appendChild(axisBtn);
+    row.appendChild(name);
+    row.appendChild(raw);
+    row.appendChild(eu);
+    row.appendChild(slope);
+    row.appendChild(offset);
+
+    panelElement.appendChild(row);
+
+    // Store references
+    arrays.chartLeds.push(chartLed);
+    arrays.axisBtns.push(axisBtn);
+    arrays.names.push(name);
+    arrays.raws.push(raw);
+    arrays.eus.push(eu);
+    arrays.slopes.push(slope);
+    arrays.offsets.push(offset);
+}
+
+            // Storage arrays for each datatype
+const doubles = { names: [], raws: [], eus: [], slopes: [], offsets: [], chartLeds: [], axisBtns: [], labelPrefix: "Double" };
+const floats  = { names: [], raws: [], eus: [], slopes: [], offsets: [], chartLeds: [], axisBtns: [], labelPrefix: "Float" };
+const ints    = { names: [], raws: [], eus: [], slopes: [], offsets: [], chartLeds: [], axisBtns: [], labelPrefix: "Int" };
+
+            // Build doubles
+            const doublePanel = document.getElementById("doublePanel");
+            for (let i = 0; i < DOUBLE_COUNT; i++) {
+                createNumericRow(i, doublePanel, doubles);
+            }
+
+            // Build floats
+            const floatPanel = document.getElementById("floatPanel");
+            for (let i = 0; i < FLOAT_COUNT; i++) {
+                createNumericRow(i, floatPanel, floats);
+            }
+
+            // Build ints
+            const intPanel = document.getElementById("intPanel");
+            for (let i = 0; i < INT_COUNT; i++) {
+                createNumericRow(i, intPanel, ints);
+            }
+
+
+        /* ------------------------------------------------------------
+           HANDLE INCOMING DATA FROM ARDUINO
+           ------------------------------------------------------------ */
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+
+            if (msg.type === "arduino") {
+
+                /* Update bool LEDs */
+                const bools = msg.data.bools;
+                for (let i = 0; i < 32; i++) {
+                    if (bools[i]) {
+                        boolElements[i].classList.add("on");
+                    } else {
+                        boolElements[i].classList.remove("on");
+                    }
+                }
+
+                /* Update strings */
+                if (msg.data.strings) {
+                    msg.data.strings.forEach((str, i) => {
+                        if (stringValues[i]) {
+                            stringValues[i].value = str;
+                        }
+                    });
+                }
+            }
+            // ---------- DOUBLES ----------
+                if (msg.data.doubles) {
+                    msg.data.doubles.forEach((value, i) => {
+                        if (doubles.raws[i]) {
+                            doubles.raws[i].value = value;
+                            const slope = parseFloat(doubles.slopes[i].value);
+                            const offset = parseFloat(doubles.offsets[i].value);
+                            doubles.eus[i].value = (value * slope + offset).toFixed(3);
+                        }
+                    });
+                }
+
+                // ---------- FLOATS ----------
+                if (msg.data.floats) {
+                    msg.data.floats.forEach((value, i) => {
+                        if (floats.raws[i]) {
+                            floats.raws[i].value = value;
+                            const slope = parseFloat(floats.slopes[i].value);
+                            const offset = parseFloat(floats.offsets[i].value);
+                            floats.eus[i].value = (value * slope + offset).toFixed(3);
+                        }
+                    });
+                }
+
+                // ---------- INTS ----------
+                if (msg.data.ints) {
+                    msg.data.ints.forEach((value, i) => {
+                        if (ints.raws[i]) {
+                            ints.raws[i].value = value;
+                            const slope = parseFloat(ints.slopes[i].value);
+                            const offset = parseFloat(ints.offsets[i].value);
+                            ints.eus[i].value = (value * slope + offset).toFixed(3);
+                        }
+                    });
+                }
+
+        };
+
+
+        /* ------------------------------------------------------------
+           SAVE NAMES FILE (JSON)
+           ------------------------------------------------------------ */
+        document.getElementById("saveNames").onclick = () => {
+
+            const data = {
+                boolNames: nameInputs.map(n => n.value),
+                stringNames: stringLabels.map(n => n.value),
+                doubleNames: doubles.names.map(n => n.value),
+                floatNames: floats.names.map(n => n.value),
+                intNames: ints.names.map(n => n.value)
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], {
+                type: "application/json"
+            });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "names.json";
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+        /* ------------------------------------------------------------
+           SAVE Offsets FILE (JSON)
+           ------------------------------------------------------------ */
+        document.getElementById("saveOffsets").onclick = () => {
+
+            const data = {
+                doubleSlopes: doubles.slopes.map(s => s.value),
+                doubleOffsets: doubles.offsets.map(o => o.value),
+
+                floatSlopes: floats.slopes.map(s => s.value),
+                floatOffsets: floats.offsets.map(o => o.value),
+
+                intSlopes: ints.slopes.map(s => s.value),
+                intOffsets: ints.offsets.map(o => o.value)
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], {
+                type: "application/json"
+            });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "offsets.json";
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+        /* ------------------------------------------------------------
+           LOAD NAMES FILE (JSON)
+           ------------------------------------------------------------ */
+document.getElementById("loadFileBtn").onclick = () => {
+    document.getElementById("loadFile").click();
+};
+
+document.getElementById("loadFile").onchange = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const data = JSON.parse(e.target.result);
+
+        // ---------- LOAD NAMES ----------
+        if (data.boolNames) {
+            data.boolNames.forEach((v, i) => nameInputs[i] && (nameInputs[i].value = v));
+        }
+        if (data.stringNames) {
+            data.stringNames.forEach((v, i) => stringLabels[i] && (stringLabels[i].value = v));
+        }
+        if (data.doubleNames) {
+            data.doubleNames.forEach((v, i) => doubles.names[i] && (doubles.names[i].value = v));
+        }
+        if (data.floatNames) {
+            data.floatNames.forEach((v, i) => floats.names[i] && (floats.names[i].value = v));
+        }
+        if (data.intNames) {
+            data.intNames.forEach((v, i) => ints.names[i] && (ints.names[i].value = v));
+        }
+
+        // ---------- LOAD OFFSETS ----------
+        if (data.doubleSlopes) {
+            data.doubleSlopes.forEach((v, i) => doubles.slopes[i] && (doubles.slopes[i].value = v));
+        }
+        if (data.doubleOffsets) {
+            data.doubleOffsets.forEach((v, i) => doubles.offsets[i] && (doubles.offsets[i].value = v));
+        }
+
+        if (data.floatSlopes) {
+            data.floatSlopes.forEach((v, i) => floats.slopes[i] && (floats.slopes[i].value = v));
+        }
+        if (data.floatOffsets) {
+            data.floatOffsets.forEach((v, i) => floats.offsets[i] && (floats.offsets[i].value = v));
+        }
+
+        if (data.intSlopes) {
+            data.intSlopes.forEach((v, i) => ints.slopes[i] && (ints.slopes[i].value = v));
+        }
+        if (data.intOffsets) {
+            data.intOffsets.forEach((v, i) => ints.offsets[i] && (ints.offsets[i].value = v));
+        }
+    };
+
+    reader.readAsText(file);
+};
+    </script>
+
+</body>
+</html>

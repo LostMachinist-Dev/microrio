@@ -1,0 +1,342 @@
+// ============================================================
+// SERVER.JS — Telemetry + Controls (Independent Namespaces)
+// ============================================================
+
+const dgram = require("dgram");
+const WebSocket = require("ws");
+const express = require("express");
+const http = require("http");
+
+// ===============================
+// CONFIG
+// ===============================
+const ARDUINO_IP = "192.168.0.50";
+const ARDUINO_PORT = 5005;   // Arduino listens here
+const GUI_PORT = 5006;       // Arduino sends telemetry here
+const WS_PORT = 8080;        // Browser WebSocket
+const HTTP_PORT = 3000;      // Browser GUI
+
+// Packet structure (must match Arduino)
+const PACKET_COUNT = 4;
+const HEADER_SIZE = 20;
+
+// Payload sizes
+const P0_PAYLOAD = 4 + (16 * 8); // boolBits + first 16 doubles
+const P1_PAYLOAD = 16 * 8;       // remaining doubles
+const P2_PAYLOAD = 4 * 64;       // strings 0..3
+const P3_PAYLOAD = 4 * 64;       // strings 4..7
+
+// ===============================
+// EXPRESS WEB SERVER
+// ===============================
+const app = express();
+const httpServer = http.createServer(app);
+
+app.use(express.static("public"));
+
+httpServer.listen(HTTP_PORT, () => {
+    console.log("GUI available at http://localhost:" + HTTP_PORT);
+});
+
+// ===============================
+// UDP SOCKET (Arduino → Node)
+// ===============================
+const udp = dgram.createSocket("udp4");
+
+udp.bind(GUI_PORT, () => {
+    console.log("UDP listening on port", GUI_PORT);
+});
+
+// ===============================
+// WEBSOCKET SERVER (Node → Browser)
+// ===============================
+const wss = new WebSocket.Server({ port: WS_PORT }, () => {
+    console.log("WebSocket server running on port", WS_PORT);
+});
+
+// Broadcast helper
+function broadcast(obj) {
+    const msg = JSON.stringify(obj);
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(msg);
+        }
+    });
+}
+
+// ===============================
+// BINARY HELPERS
+// ===============================
+function readUint32(buf, offset) {
+    return buf.readUInt32LE(offset);
+}
+
+function readUint64(buf, offset) {
+    return Number(buf.readBigUInt64LE(offset));
+}
+
+function readDouble(buf, offset) {
+    return buf.readDoubleLE(offset);
+}
+
+// ===============================
+// FRAME REASSEMBLY STATE
+// ===============================
+let inboundFrames = {}; // keyed by frameId
+
+function ensureFrame(frameId) {
+    if (!inboundFrames[frameId]) {
+        inboundFrames[frameId] = {
+            received: new Array(PACKET_COUNT).fill(false),
+            packets: new Array(PACKET_COUNT),
+            timestamp: Date.now()
+        };
+    }
+    return inboundFrames[frameId];
+}
+
+// Cleanup old frames
+setInterval(() => {
+    const now = Date.now();
+    for (const id in inboundFrames) {
+        if (now - inboundFrames[id].timestamp > 200) {
+            delete inboundFrames[id];
+        }
+    }
+}, 500);
+
+// ===============================
+// PARSE COMPLETE FRAME (Arduino → GUI)
+// ===============================
+function parseCompleteFrame(frame) {
+    const packets = frame.packets;
+
+    // ---- HEADER FROM PACKET 0 ----
+    const p0 = packets[0];
+    let offset = 0;
+
+    const frameId = readUint32(p0, offset); offset += 4;
+    const rxFrameId = readUint32(p0, offset); offset += 4;
+    const timestamp = readUint64(p0, offset); offset += 8;
+
+    const dsState = p0[offset]; offset += 4;
+
+    // ---- BOOLS ----
+    const boolBits = readUint32(p0, offset);
+    offset += 4;
+
+    const bools = [];
+    for (let i = 0; i < 32; i++) {
+        bools.push((boolBits & (1 << i)) !== 0);
+    }
+
+    // ---- DOUBLES ----
+    const doubles = [];
+
+    // First 16 doubles from packet 0
+    for (let i = 0; i < 16; i++) {
+        doubles.push(readDouble(p0, offset));
+        offset += 8;
+    }
+
+    // Next 16 doubles from packet 1
+    const p1 = packets[1];
+    offset = HEADER_SIZE;
+    for (let i = 0; i < 16; i++) {
+        doubles.push(readDouble(p1, offset));
+        offset += 8;
+    }
+
+    // ---- STRINGS ----
+    const strings = [];
+
+    // Strings 0..3 from packet 2
+    const p2 = packets[2];
+    offset = HEADER_SIZE;
+    for (let i = 0; i < 4; i++) {
+        const raw = p2.slice(offset, offset + 64);
+        offset += 64;
+        const zero = raw.indexOf(0);
+        strings.push(zero >= 0 ? raw.slice(0, zero).toString() : raw.toString());
+    }
+
+    // Strings 4..7 from packet 3
+    const p3 = packets[3];
+    offset = HEADER_SIZE;
+    for (let i = 0; i < 4; i++) {
+        const raw = p3.slice(offset, offset + 64);
+        offset += 64;
+        const zero = raw.indexOf(0);
+        strings.push(zero >= 0 ? raw.slice(0, zero).toString() : raw.toString());
+    }
+
+    return {
+        frameId,
+        rxFrameId,
+        timestamp,
+        dsState,
+        bools,
+        doubles,
+        strings
+    };
+}
+
+// ===============================
+// RECEIVE FROM ARDUINO (UDP)
+// ===============================
+udp.on("message", (msg, rinfo) => {
+    if (msg.length < HEADER_SIZE) return;
+
+    let offset = 0;
+
+    const frameId = readUint32(msg, offset); offset += 4;
+    const rxFrameId = readUint32(msg, offset); offset += 4;
+    const timestamp = readUint64(msg, offset); offset += 8;
+
+    const dsState = msg[offset++];
+    const packetIndex = msg[offset++];
+    const packetCount = msg[offset++];
+    offset++;
+
+    if (packetCount !== PACKET_COUNT || packetIndex >= PACKET_COUNT) {
+        return;
+    }
+
+    const frame = ensureFrame(frameId);
+    frame.packets[packetIndex] = msg;
+    frame.received[packetIndex] = true;
+
+    // If all packets received, parse and broadcast
+    if (frame.received.every(x => x)) {
+        const parsed = parseCompleteFrame(frame);
+
+        broadcast({
+            type: "arduino",
+            data: parsed
+        });
+
+        delete inboundFrames[frameId];
+    }
+});
+
+// ===============================
+// BUILD OUTBOUND PACKETS (GUI → Arduino)
+// ===============================
+function buildInboundPackets(obj) {
+    const packets = [];
+
+    const frameId = obj.frameId || 0;
+    const timestamp = obj.timestamp || 0;
+
+    // Helper to build header
+    function writeHeader(buf, packetIndex) {
+        let o = 0;
+        buf.writeUInt32LE(frameId, o); o += 4;
+        buf.writeUInt32LE(0, o); o += 4; // ackFrameId (unused)
+        buf.writeBigUInt64LE(BigInt(timestamp), o); o += 8;
+        buf[o++] = 0; // dsState from GUI (unused)
+        buf[o++] = packetIndex;
+        buf[o++] = PACKET_COUNT;
+        buf[o++] = 0; // reserved
+        return o;
+    }
+
+    // ---- PACKET 0 ----
+    {
+        const buf = Buffer.alloc(HEADER_SIZE + P0_PAYLOAD);
+        let o = writeHeader(buf, 0);
+
+        // bools (from c_bools)
+        let bits = 0;
+        if (Array.isArray(obj.c_bools)) {
+            for (let i = 0; i < 32; i++) {
+                if (obj.c_bools[i]) bits |= (1 << i);
+            }
+        }
+        buf.writeUInt32LE(bits, o); o += 4;
+
+        // doubles 0..15 (from c_doubles)
+        for (let i = 0; i < 16; i++) {
+            buf.writeDoubleLE(Number(obj.c_doubles?.[i] || 0), o);
+            o += 8;
+        }
+
+        packets.push(buf);
+    }
+
+    // ---- PACKET 1 ----
+    {
+        const buf = Buffer.alloc(HEADER_SIZE + P1_PAYLOAD);
+        let o = writeHeader(buf, 1);
+
+        for (let i = 16; i < 32; i++) {
+            buf.writeDoubleLE(Number(obj.c_doubles?.[i] || 0), o);
+            o += 8;
+        }
+
+        packets.push(buf);
+    }
+
+    // ---- PACKET 2 ---- (strings 0..3)
+    {
+        const buf = Buffer.alloc(HEADER_SIZE + P2_PAYLOAD);
+        let o = writeHeader(buf, 2);
+
+        for (let i = 0; i < 4; i++) {
+            const s = String(obj.c_strings?.[i] || "");
+            const raw = Buffer.alloc(64);
+            raw.write(s.substring(0, 63));
+            raw.copy(buf, o);
+            o += 64;
+        }
+
+        packets.push(buf);
+    }
+
+    // ---- PACKET 3 ---- (strings 4..7)
+    {
+        const buf = Buffer.alloc(HEADER_SIZE + P3_PAYLOAD);
+        let o = writeHeader(buf, 3);
+
+        for (let i = 4; i < 8; i++) {
+            const s = String(obj.c_strings?.[i] || "");
+            const raw = Buffer.alloc(64);
+            raw.write(s.substring(0, 63));
+            raw.copy(buf, o);
+            o += 64;
+        }
+
+        packets.push(buf);
+    }
+
+    return packets;
+}
+
+// ===============================
+// RECEIVE FROM GUI (WebSocket)
+// ===============================
+wss.on("connection", ws => {
+    console.log("GUI connected");
+
+    ws.on("message", msg => {
+        try {
+            const obj = JSON.parse(msg);
+
+            // Only process control packets
+            if (obj.type === "controls") {
+                const packets = buildInboundPackets(obj.data);
+
+                for (const p of packets) {
+                    udp.send(p, 0, p.length, ARDUINO_PORT, ARDUINO_IP);
+                }
+            }
+
+        } catch (err) {
+            console.log("Bad JSON from GUI:", msg);
+        }
+    });
+
+    ws.on("close", () => {
+        console.log("GUI disconnected");
+    });
+});

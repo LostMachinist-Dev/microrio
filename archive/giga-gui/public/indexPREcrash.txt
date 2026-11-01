@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GIGA Instrument Panel</title>
+
+<style>
+/* ============================
+   GLOBAL FONT + LAYOUT
+   ============================ */
+body {
+    margin: 0;
+    padding: 0;
+    background: #111;
+    color: #eee;
+
+    /* Instrument-grade font stack */
+    font-family:
+        "Bahnschrift",
+        "DIN Alternate",
+        "DIN Condensed",
+        "Segoe UI",
+        sans-serif;
+
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ============================
+   LEFT 50% GRID
+   ============================ */
+#leftPanel {
+    width: 50%;
+    height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+
+    display: grid;
+
+    /* 8 columns: bool, dbl name, raw, scaled, slope, offset, str name, str val */
+    grid-template-columns:
+        8%   /* bool name */
+        12%  /* dbl name */
+        10%  /* dbl raw */
+        10%  /* dbl scaled */
+        8%   /* slope */
+        8%   /* offset */
+        12%  /* string name */
+        12%; /* string value */
+
+    gap: 4px;
+}
+
+/* ============================
+   RIGHT 50% (future controls)
+   ============================ */
+#rightPanel {
+    width: 50%;
+    padding: 20px;
+    box-sizing: border-box;
+    border-left: 1px solid #333;
+}
+
+/* ============================
+   UNIFIED CELL STYLE
+   ============================ */
+.cell {
+    background: #181818;
+    border: 1px solid #333;
+    padding: 4px 6px;
+    font-size: 12px;
+    border-radius: 4px;
+    height: 22px;
+
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+/* Inputs share the same style */
+.cell input {
+    width: 100%;
+    height: 100%;
+    background: transparent;   /* no inner box */
+    border: none;              /* remove inner border */
+    color: #eee;
+    padding: 0 4px;            /* minimal padding */
+    font-size: inherit;
+    border-radius: 0;          /* remove inner rounding */
+    box-sizing: border-box;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- ============================
+     LEFT 50% GRID
+     ============================ -->
+<div id="leftPanel" id="grid">
+
+    <!-- Example row 0 -->
+    <div class="cell"><input value="Bool 0"></div>
+    <div class="cell"><input value="Dbl 0"></div>
+    <div class="cell" id="dbl_raw_0">0</div>
+    <div class="cell" id="dbl_scaled_0">0</div>
+    <div class="cell"><input id="slope_0" value="1"></div>
+    <div class="cell"><input id="offset_0" value="0"></div>
+    <div class="cell"><input value="Str 0"></div>
+    <div class="cell" id="str_val_0">-</div>
+
+    <!-- JS will generate the remaining rows -->
+</div>
+
+<!-- ============================
+     RIGHT 50% CONTROLS
+     ============================ -->
+<div id="rightPanel">
+    <h2>Browser → GIGA Controls</h2>
+    <p>Reserved for your future control UI.</p>
+</div>
+
+<script>
+/* ============================================================
+   BUILD GRID ROWS
+   ============================================================ */
+
+const left = document.getElementById("leftPanel");
+
+// Clear the example row
+left.innerHTML = "";
+
+// Build 32 rows for bool/double/string
+for (let i = 0; i < 32; i++) {
+
+    // Bool name
+    left.innerHTML += `<div class="cell"><input id="bool_name_${i}" value="B${i}"></div>`;
+
+    // Double name
+    left.innerHTML += `<div class="cell"><input id="dbl_name_${i}" value="D${i}"></div>`;
+
+    // Double raw
+    left.innerHTML += `<div class="cell" id="dbl_raw_${i}">0</div>`;
+
+    // Double scaled
+    left.innerHTML += `<div class="cell" id="dbl_scaled_${i}">0</div>`;
+
+    // Slope
+    left.innerHTML += `<div class="cell"><input id="slope_${i}" value="1"></div>`;
+
+    // Offset
+    left.innerHTML += `<div class="cell"><input id="offset_${i}" value="0"></div>`;
+
+    // String name
+    left.innerHTML += `<div class="cell"><input id="str_name_${i}" value="S${i}"></div>`;
+
+    // String value
+    left.innerHTML += `<div class="cell" id="str_val_${i}">-</div>`;
+}
+
+/* ============================================================
+   WEBSOCKET TELEMETRY UPDATE
+   ============================================================ */
+
+const ws = new WebSocket("ws://localhost:8080");
+
+ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type !== "arduino") return;
+
+    const data = msg.data;
+
+    // Update doubles
+    data.doubles.forEach((v, i) => {
+        const rawEl = document.getElementById(`dbl_raw_${i}`);
+        const scaledEl = document.getElementById(`dbl_scaled_${i}`);
+        const slope = parseFloat(document.getElementById(`slope_${i}`).value) || 0;
+        const offset = parseFloat(document.getElementById(`offset_${i}`).value) || 0;
+
+        rawEl.textContent = v.toFixed(3);
+        scaledEl.textContent = (v * slope + offset).toFixed(3);
+    });
+
+    // Update strings
+    data.strings.forEach((v, i) => {
+        const el = document.getElementById(`str_val_${i}`);
+        if (el) el.textContent = v;
+    });
+};
+</script>
+
+</body>
+</html>

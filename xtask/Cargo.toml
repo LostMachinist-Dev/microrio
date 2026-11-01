@@ -1,0 +1,11 @@
+[package]
+name = "xtask"
+description = "Project automation: C++ header generation and hardware conformance testing."
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+toml = "0.8.19"
+serialport = { version = "4.6.1", default-features = false }
+microrio-proto = { path = "../microrio-proto" }

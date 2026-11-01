@@ -1,0 +1,5 @@
+node_modules/
+target/
+*.mrlog
+wifi_secrets.h
+wifi.txt

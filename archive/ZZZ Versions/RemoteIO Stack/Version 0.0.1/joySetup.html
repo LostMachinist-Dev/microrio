@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Joystick Setup</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #202124;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 16px;
+        }
+        select, input, button {
+            background: #303134;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            padding: 4px 6px;
+            border-radius: 2px;
+        }
+        button { cursor: pointer; }
+        #rawGrid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            margin-top: 12px;
+        }
+        .byteCell {
+            border: 1px solid #444;
+            padding: 4px;
+            font-size: 11px;
+            background: #2b2c2f;
+        }
+        .byteHeader { font-weight: bold; margin-bottom: 4px; }
+        .bitRow { display: flex; gap: 2px; justify-content: center; }
+        .bitLed {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            background: #111;
+        }
+        .bitOn { background: #4caf50; }
+        .panel {
+            margin-top: 16px;
+            padding: 8px;
+            border: 1px solid #444;
+            background: #26272a;
+        }
+        .row { margin-bottom: 8px; }
+        .bitAssignRow {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        .bitAssignRow span { min-width: 50px; }
+        .hatLabel {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Joystick Setup</h2>
+
+<div class="row">
+    <label>Controller:
+        <select id="controllerSelect"></select>
+    </label>
+</div>
+
+<div id="rawGrid"></div>
+
+<div class="panel">
+    <h3>Mapping</h3>
+
+    <div class="row">
+        <label>Byte:
+            <select id="byteSelect"></select>
+        </label>
+    </div>
+
+    <div class="row">
+        <label>Mapping Type:
+            <select id="mapTypeSelect">
+                <option value="axis">Axis</option>
+                <option value="bitmask">Bitmask</option>
+                <option value="mixed">Mixed</option>
+            </select>
+        </label>
+    </div>
+
+    <!-- Axis config -->
+    <div id="axisConfig" style="display:none;">
+        <div class="row">
+            <label>Axis:
+                <select id="axisSelect"></select>
+            </label>
+        </div>
+        <div class="row">
+            <label>Min:
+                <input id="axisMin" type="number" step="1" value="-100">
+            </label>
+            <label>Max:
+                <input id="axisMax" type="number" step="1" value="100">
+            </label>
+            <label>Trim:
+                <input id="axisTrim" type="number" step="1" value="0">
+            </label>
+        </div>
+        <div class="row">
+            <label>
+                <input id="axisExpoEnabled" type="checkbox"> Expo enabled
+            </label>
+            <label>Expo:
+                <input id="axisExpo" type="number" step="0.05" value="0.5" min="0" max="1">
+            </label>
+        </div>
+        <div class="row">
+            Mapped value: <span id="axisMappedValue">0</span>
+        </div>
+    </div>
+
+    <!-- Bitmask config -->
+    <div id="bitmaskConfig" style="display:none;">
+        <div id="bitmaskBits"></div>
+    </div>
+
+    <!-- Mixed config -->
+    <div id="mixedConfig" style="display:none;">
+        <div class="row">
+            <label>Hat start bit:
+                <input id="hatStart" type="number" min="0" max="7" value="0">
+            </label>
+            <label>Hat:
+                <select id="hatSelect"></select>
+            </label>
+        </div>
+        <div id="mixedBits"></div>
+    </div>
+
+    <div class="row">
+        <button id="saveMappingBtn">Save Mapping</button>
+    </div>
+</div>
+
+<script>
+const ws = new WebSocket("ws://localhost:9001");
+
+let controllerList = [];
+let controllerRaw = {};
+let mapping = {};
+let selectedController = null;
+let selectedByte = 0;
+
+const controllerSelect = document.getElementById("controllerSelect");
+const byteSelect = document.getElementById("byteSelect");
+const mapTypeSelect = document.getElementById("mapTypeSelect");
+
+const rawGrid = document.getElementById("rawGrid");
+
+const axisConfig = document.getElementById("axisConfig");
+const bitmaskConfig = document.getElementById("bitmaskConfig");
+const mixedConfig = document.getElementById("mixedConfig");
+
+const axisSelect = document.getElementById("axisSelect");
+const axisMin = document.getElementById("axisMin");
+const axisMax = document.getElementById("axisMax");
+const axisTrim = document.getElementById("axisTrim");
+const axisExpoEnabled = document.getElementById("axisExpoEnabled");
+const axisExpo = document.getElementById("axisExpo");
+const axisMappedValue = document.getElementById("axisMappedValue");
+
+const bitmaskBitsDiv = document.getElementById("bitmaskBits");
+const mixedBitsDiv = document.getElementById("mixedBits");
+const hatStartInput = document.getElementById("hatStart");
+const hatSelect = document.getElementById("hatSelect");
+
+ws.onmessage = evt => {
+    const data = JSON.parse(evt.data);
+    if (data.type === "raw") {
+        const id = data.controllerID;
+        const raw = data.raw;
+
+        if (!controllerList.includes(id)) {
+            controllerList.push(id);
+            const opt = document.createElement("option");
+            opt.value = id;
+            opt.textContent = id;
+            controllerSelect.appendChild(opt);
+            if (!selectedController) {
+                selectedController = id;
+                controllerSelect.value = id;
+                initByteSelect();
+            }
+        }
+
+        controllerRaw[id] = raw;
+
+        if (id === selectedController) {
+            updateRawGrid(raw);
+            updateAxisPreview();
+            // rebuild bit/mixed UI so LEDs reflect current byte
+            
+        }
+    }
+};
+
+controllerSelect.onchange = () => {
+    selectedController = controllerSelect.value;
+    initByteSelect();
+    updateRawGrid(controllerRaw[selectedController] || []);
+    loadMappingForSelection();
+    updateAxisPreview();
+};
+
+function initByteSelect() {
+    byteSelect.innerHTML = "";
+    for (let i = 0; i < 64; i++) {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = "Byte " + i;
+        byteSelect.appendChild(opt);
+    }
+    selectedByte = 0;
+    byteSelect.value = "0";
+}
+
+byteSelect.onchange = () => {
+    selectedByte = Number(byteSelect.value);
+    loadMappingForSelection();
+    updateAxisPreview();
+};
+
+mapTypeSelect.onchange = () => {
+    updateMapTypeUI();
+    // build fresh UI for new type even if no mapping yet
+    const ctrlMap = mapping[selectedController] || {};
+    const entry = ctrlMap[selectedByte] || {};
+    if (mapTypeSelect.value === "bitmask") {
+        buildBitmaskUI(entry.buttons || {});
+    } else if (mapTypeSelect.value === "mixed") {
+        buildMixedUI(entry.buttons || {});
+    }
+    updateAxisPreview();
+};
+
+function updateMapTypeUI() {
+    const type = mapTypeSelect.value;
+    axisConfig.style.display = (type === "axis") ? "block" : "none";
+    bitmaskConfig.style.display = (type === "bitmask") ? "block" : "none";
+    mixedConfig.style.display = (type === "mixed") ? "block" : "none";
+}
+
+function updateRawGrid(raw = []) {
+    rawGrid.innerHTML = "";
+    for (let i = 0; i < 64; i++) {
+        const val = raw[i] ?? 0;
+        const cell = document.createElement("div");
+        cell.className = "byteCell";
+
+        const header = document.createElement("div");
+        header.className = "byteHeader";
+        header.textContent = "Byte " + i + " : " + val;
+        cell.appendChild(header);
+
+        const bitsRow = document.createElement("div");
+        bitsRow.className = "bitRow";
+
+        for (let b = 7; b >= 0; b--) {
+            const led = document.createElement("div");
+            led.className = "bitLed";
+            if (val & (1 << b)) led.classList.add("bitOn");
+            bitsRow.appendChild(led);
+        }
+
+        cell.appendChild(bitsRow);
+        rawGrid.appendChild(cell);
+    }
+}
+
+function initNameDropdowns() {
+    axisSelect.innerHTML = "";
+    for (let i = 0; i < 8; i++) {
+        const opt = document.createElement("option");
+        opt.value = "Axis " + i;
+        opt.textContent = "Axis " + i;
+        axisSelect.appendChild(opt);
+    }
+
+    hatSelect.innerHTML = "";
+    for (let i = 0; i < 4; i++) {
+        const opt = document.createElement("option");
+        opt.value = "Hat " + i;
+        opt.textContent = "Hat " + i;
+        hatSelect.appendChild(opt);
+    }
+}
+
+function buildButtonDropdown(selected) {
+    const sel = document.createElement("select");
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "Unused";
+    sel.appendChild(noneOpt);
+
+    for (let i = 0; i < 16; i++) {
+        const opt = document.createElement("option");
+        opt.value = "Button " + i;
+        opt.textContent = "Button " + i;
+        sel.appendChild(opt);
+    }
+
+    if (selected) sel.value = selected;
+    return sel;
+}
+
+function getCurrentByteValue() {
+    if (!selectedController) return 0;
+    const raw = controllerRaw[selectedController] || [];
+    return raw[selectedByte] ?? 0;
+}
+
+function loadMappingForSelection() {
+    if (!selectedController) return;
+
+    const ctrlMap = mapping[selectedController] || {};
+    const entry = ctrlMap[selectedByte];
+
+    axisSelect.value = "Axis 0";
+    axisMin.value = -100;
+    axisMax.value = 100;
+    axisTrim.value = 0;
+    axisExpoEnabled.checked = false;
+    axisExpo.value = 0.5;
+    hatStartInput.value = 0;
+    hatSelect.value = "Hat 0";
+    bitmaskBitsDiv.innerHTML = "";
+    mixedBitsDiv.innerHTML = "";
+
+    if (!entry) {
+        updateMapTypeUI();
+        // build empty UI for current type
+        if (mapTypeSelect.value === "bitmask") buildBitmaskUI({});
+        if (mapTypeSelect.value === "mixed") buildMixedUI({});
+        return;
+    }
+
+    mapTypeSelect.value = entry.type;
+    updateMapTypeUI();
+
+    if (entry.type === "axis") {
+        axisSelect.value = entry.axis || "Axis 0";
+        axisMin.value = entry.min ?? -100;
+        axisMax.value = entry.max ?? 100;
+        axisTrim.value = entry.trim ?? 0;
+        axisExpoEnabled.checked = entry.expoEnabled ?? false;
+        axisExpo.value = entry.expo ?? 0.5;
+    }
+
+    if (entry.type === "bitmask") {
+        buildBitmaskUI(entry.buttons || {});
+    }
+
+    if (entry.type === "mixed") {
+        hatStartInput.value = entry.hatStart ?? 0;
+        hatSelect.value = entry.hat || "Hat 0";
+        buildMixedUI(entry.buttons || {});
+    }
+
+    updateAxisPreview();
+}
+
+function buildBitmaskUI(existingButtons) {
+    bitmaskBitsDiv.innerHTML = "";
+    const val = getCurrentByteValue();
+    for (let b = 0; b < 8; b++) {
+        const row = document.createElement("div");
+        row.className = "bitAssignRow";
+
+        const led = document.createElement("div");
+        led.className = "bitLed";
+        if (val & (1 << b)) led.classList.add("bitOn");
+        row.appendChild(led);
+
+        const label = document.createElement("span");
+        label.textContent = "Bit " + b;
+        row.appendChild(label);
+
+        const dd = buildButtonDropdown(existingButtons[b]);
+        dd.dataset.bit = b;
+        row.appendChild(dd);
+
+        bitmaskBitsDiv.appendChild(row);
+    }
+}
+
+function buildMixedUI(existingButtons) {
+    mixedBitsDiv.innerHTML = "";
+    const val = getCurrentByteValue();
+    const hatStart = Number(hatStartInput.value) || 0;
+    const hatEnd = Math.min(hatStart + 3, 7);
+
+    for (let b = 0; b < 8; b++) {
+        const row = document.createElement("div");
+        row.className = "bitAssignRow";
+
+        const led = document.createElement("div");
+        led.className = "bitLed";
+        if (val & (1 << b)) led.classList.add("bitOn");
+        row.appendChild(led);
+
+        const label = document.createElement("span");
+        label.textContent = "Bit " + b;
+        row.appendChild(label);
+
+        if (b >= hatStart && b <= hatEnd) {
+            const hatLbl = document.createElement("span");
+            hatLbl.className = "hatLabel";
+            hatLbl.textContent = "(Hat)";
+            row.appendChild(hatLbl);
+        } else {
+            const dd = buildButtonDropdown(existingButtons[b]);
+            dd.dataset.bit = b;
+            row.appendChild(dd);
+        }
+
+        mixedBitsDiv.appendChild(row);
+    }
+}
+
+[axisMin, axisMax, axisTrim, axisExpo, axisExpoEnabled].forEach(el => {
+    el.oninput = () => updateAxisPreview();
+});
+hatStartInput.oninput = () => {
+    if (mapTypeSelect.value === "mixed") {
+        // rebuild mixed UI with same button mapping but new hat window
+        const ctrlMap = mapping[selectedController] || {};
+        const entry = ctrlMap[selectedByte] || {};
+        buildMixedUI(entry.buttons || {});
+    }
+};
+
+function updateAxisPreview() {
+    if (!selectedController) {
+        axisMappedValue.textContent = "0";
+        return;
+    }
+    const rawVal = getCurrentByteValue();
+    let min = Number(axisMin.value) || 0;
+    let max = Number(axisMax.value) || 0;
+    let trim = Number(axisTrim.value) || 0;
+    if (min > max) [min, max] = [max, min];
+
+    let output;
+
+    if (!axisExpoEnabled.checked) {
+        // No expo: map raw 0..255 -> min..max, then trim, clamp, int
+        const t = rawVal / 255;
+        let scaled = min + (max - min) * t;
+        let trimmed = scaled + trim;
+        let clamped = Math.max(min, Math.min(max, trimmed));
+        output = Math.round(clamped);
+    } else {
+        // Expo: normalize -1..1, cubic blend, map -1..1 -> min..max, then trim, clamp, int
+        let x = (rawVal / 127.5) - 1; // -1..1
+        const e = Number(axisExpo.value) || 0;
+        let expoVal = x * (1 - e) + (x * x * x) * e;
+        // map expoVal (-1..1) to min..max
+        let scaled = min + (max - min) * ((expoVal + 1) / 2);
+        let trimmed = scaled + trim;
+        let clamped = Math.max(min, Math.min(max, trimmed));
+        output = Math.round(clamped);
+    }
+
+    axisMappedValue.textContent = String(output);
+}
+
+document.getElementById("saveMappingBtn").onclick = () => {
+    if (!selectedController) {
+        alert("Select a controller first");
+        return;
+    }
+
+    const type = mapTypeSelect.value;
+    let entry = { type };
+
+    if (type === "axis") {
+        entry.axis = axisSelect.value;
+        entry.min = Number(axisMin.value);
+        entry.max = Number(axisMax.value);
+        entry.trim = Number(axisTrim.value);
+        entry.expoEnabled = axisExpoEnabled.checked;
+        entry.expo = Number(axisExpo.value);
+    }
+
+    if (type === "bitmask") {
+        const buttons = {};
+        bitmaskBitsDiv.querySelectorAll("select").forEach(sel => {
+            const bit = Number(sel.dataset.bit);
+            if (sel.value) buttons[bit] = sel.value;
+        });
+        entry.buttons = buttons;
+    }
+
+    if (type === "mixed") {
+        const buttons = {};
+        mixedBitsDiv.querySelectorAll("select").forEach(sel => {
+            const bit = Number(sel.dataset.bit);
+            if (sel.value) buttons[bit] = sel.value;
+        });
+        entry.hatStart = Number(hatStartInput.value) || 0;
+        entry.hat = hatSelect.value;
+        entry.buttons = buttons;
+    }
+
+    if (!mapping[selectedController]) mapping[selectedController] = {};
+    mapping[selectedController][selectedByte] = entry;
+
+    ws.send(JSON.stringify({
+        type: "saveMapping",
+        controllerID: selectedController,
+        mapping: mapping[selectedController]
+    }));
+
+    alert("Mapping saved");
+};
+
+initNameDropdowns();
+initByteSelect();
+updateMapTypeUI();
+</script>
+
+</body>
+</html>

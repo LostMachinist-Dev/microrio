@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Telemetry Panel</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .row { margin-bottom: 15px; }
+    label { display: inline-block; width: 120px; }
+    #latency { font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h2>Live Telemetry</h2>
+
+<div class="row">
+  <label>Timestamp:</label>
+  <span id="ts"></span>
+</div>
+
+<div class="row">
+  <label>A0:</label>
+  <span id="a0"></span>
+</div>
+
+<div class="row">
+  <label>Heartbeat:</label>
+  <span id="hb"></span>
+</div>
+
+<hr>
+
+<h2>Controls → Mega</h2>
+
+<div class="row">
+  <label>Bool:</label>
+  <input type="checkbox" id="ctrlBool">
+</div>
+
+<div class="row">
+  <label>Int:</label>
+  <input type="range" id="ctrlInt" min="0" max="1023" value="0">
+  <span id="ctrlIntVal">0</span>
+</div>
+
+<div class="row">
+  <label>String:</label>
+  <input type="text" id="ctrlStr" value="">
+</div>
+
+<hr>
+
+<div class="row">
+  <label>Latency:</label>
+  <span id="latency">--</span> ms
+</div>
+
+<script>
+  const ws = new WebSocket("ws://localhost:8080");
+
+  let lastSend = 0;
+
+  ws.onmessage = evt => {
+    const t = JSON.parse(evt.data);
+
+const d = new Date(t.ts_sec * 1000);
+const human =
+  d.getFullYear() + "-" +
+  String(d.getMonth()+1).padStart(2,"0") + "-" +
+  String(d.getDate()).padStart(2,"0") + " " +
+  String(d.getHours()).padStart(2,"0") + ":" +
+  String(d.getMinutes()).padStart(2,"0") + ":" +
+  String(d.getSeconds()).padStart(2,"0") + "." +
+  t.ts_usec.toString().padStart(6, "0");
+
+document.getElementById("ts").textContent = human;
+
+    document.getElementById("a0").textContent = t.A0;
+    document.getElementById("hb").textContent = t.HB ? "true" : "false";
+
+    const now = performance.now();
+    document.getElementById("latency").textContent =
+      (now - lastSend).toFixed(1);
+  };
+
+  function sendControl() {
+    lastSend = performance.now();
+
+    const buf = new ArrayBuffer(1 + 4 + 64);
+    const view = new DataView(buf);
+    let offset = 0;
+
+    // Bool
+    view.setUint8(offset, document.getElementById("ctrlBool").checked ? 1 : 0);
+    offset += 1;
+
+    // Int
+    view.setInt32(offset, parseInt(document.getElementById("ctrlInt").value));
+    offset += 4;
+
+    // String
+    const str = document.getElementById("ctrlStr").value;
+    const enc = new TextEncoder().encode(str);
+    const bytes = new Uint8Array(buf, offset, 64);
+    bytes.set(enc.slice(0, 63));
+
+    ws.send(buf);
+  }
+
+  document.getElementById("ctrlBool").onchange = sendControl;
+  document.getElementById("ctrlInt").oninput = e => {
+    document.getElementById("ctrlIntVal").textContent = e.target.value;
+    sendControl();
+  };
+  document.getElementById("ctrlStr").oninput = sendControl;
+</script>
+
+</body>
+</html>

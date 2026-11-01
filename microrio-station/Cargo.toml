@@ -1,0 +1,36 @@
+[package]
+name = "microrio-station"
+description = "MicroRIO driver station: multi-node telemetry, control, joystick mapping and logging."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow = "1.0.104"
+chrono = "0.4.45"
+chrono-tz = "0.10.4"
+iana-time-zone = "0.1.64"
+dirs = "7.0.0"
+# Both renderers are compiled in: the station tries OpenGL first and falls
+# back to wgpu, so it opens on a plain laptop and on a machine with no GPU at
+# all rather than exiting with a graphics error.
+eframe = { version = "0.37.0", features = ["glow"] }
+egui = "0.37.0"
+egui_plot = "0.38.0"
+gilrs = "0.11.2"
+microrio-proto = { path = "../microrio-proto" }
+rfd = "0.17.2"
+# Only for a listening socket that two stations on one computer can share.
+socket2 = "0.6.1"
+serde = { version = "1.0.229", features = ["derive"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "net", "sync", "time", "macros"] }
+toml = "1.1.8"
+
+# One station per machine: an advisory lock on a file, which the kernel
+# releases however the process ends.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.180"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Storage_FileSystem", "Win32_Foundation"] }

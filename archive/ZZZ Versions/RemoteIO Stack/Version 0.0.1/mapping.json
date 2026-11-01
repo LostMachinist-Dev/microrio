@@ -1,0 +1,14 @@
+{
+  "controllers": {
+    "054c-09cc-NOSN": {
+      "identity": {
+        "vendorId": 1356,
+        "productId": 2508,
+        "serialNumber": null,
+        "manufacturer": "Sony Interactive Entertainment",
+        "product": "Wireless Controller"
+      },
+      "mapping": {}
+    }
+  }
+}

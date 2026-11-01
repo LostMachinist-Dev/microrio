@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>JSON Viewer</title>
+<style>
+    body {
+        background: #111;
+        color: #0f0;
+        font-family: monospace;
+        margin: 0;
+        padding: 10px;
+    }
+    #log {
+        white-space: pre;
+        overflow-y: scroll;
+        height: 98vh;
+        border: 1px solid #333;
+        padding: 10px;
+        background: #000;
+    }
+</style>
+</head>
+<body>
+
+<h3>Live JSON Stream</h3>
+<div id="log"></div>
+
+<script>
+const log = document.getElementById("log");
+const ws = new WebSocket("ws://localhost:8080");
+
+ws.onmessage = (event) => {
+    const now = new Date().toISOString();
+    log.textContent += `[${now}] ${event.data}\n\n`;
+    log.scrollTop = log.scrollHeight;
+};
+</script>
+
+</body>
+</html>

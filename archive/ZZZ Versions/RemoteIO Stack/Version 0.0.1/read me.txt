@@ -1,0 +1,9 @@
+Arduino was talking to server.js reading and writing control and telemetry to index.html but in the course of trying to get the joystick pulled in it is now bricked
+
+index.html is super basic and works ish
+
+server.js is talking to joystick-service.js
+
+joystick service.js talks to joysetup.html
+
+joysetup.html is doing a lot of heavy lifting at the moment to handle parsing and mapping. Heavy lifting that'll need to be duplicated in joystick service. Kinda regretting going this route.Joysetup creates a mapping file that is used to declare the mapping values from the html code. this is mostly to allow the user to close the html and not be routign control packets through it. alternatively a user can set up or tune controls from the mapping.json file.

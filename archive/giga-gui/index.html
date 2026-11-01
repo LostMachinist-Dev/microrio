@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>RemoteIO Diagnostic UI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #000000;
+  --panel: #f0f0f0;
+  --border: #cccccc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111111;
+    --fg: #eeeeee;
+    --panel: #1e1e1e;
+    --border: #333333;
+  }
+}
+
+body {
+  margin: 0;
+  padding: 20px;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, sans-serif;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.panel {
+  background: var(--panel);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.valueBox {
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 20px;
+}
+
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+}
+
+button {
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--fg);
+  cursor: pointer;
+}
+button:hover { opacity: 0.8; }
+</style>
+</head>
+
+<body>
+
+<h1>RemoteIO Diagnostic UI</h1>
+
+<div id="wsStatus" style="margin-bottom:20px; font-weight:bold;">WS: Connecting…</div>
+
+<div class="container">
+
+<!-- ============================================================
+     TELEMETRY (LEFT)
+============================================================ -->
+<div class="panel">
+  <h2>Telemetry (first 10)</h2>
+
+  <h3>Bools</h3>
+  <div class="grid">
+    <label for="tbool0">TBool 0</label><div class="valueBox" id="tbool0"></div>
+    <label for="tbool1">TBool 1</label><div class="valueBox" id="tbool1"></div>
+    <label for="tbool2">TBool 2</label><div class="valueBox" id="tbool2"></div>
+    <label for="tbool3">TBool 3</label><div class="valueBox" id="tbool3"></div>
+    <label for="tbool4">TBool 4</label><div class="valueBox" id="tbool4"></div>
+    <label for="tbool5">TBool 5</label><div class="valueBox" id="tbool5"></div>
+    <label for="tbool6">TBool 6</label><div class="valueBox" id="tbool6"></div>
+    <label for="tbool7">TBool 7</label><div class="valueBox" id="tbool7"></div>
+    <label for="tbool8">TBool 8</label><div class="valueBox" id="tbool8"></div>
+    <label for="tbool9">TBool 9</label><div class="valueBox" id="tbool9"></div>
+  </div>
+
+  <h3>Ints</h3>
+  <div class="grid">
+    <label for="tint0">TInt 0</label><div class="valueBox" id="tint0"></div>
+    <label for="tint1">TInt 1</label><div class="valueBox" id="tint1"></div>
+    <label for="tint2">TInt 2</label><div class="valueBox" id="tint2"></div>
+    <label for="tint3">TInt 3</label><div class="valueBox" id="tint3"></div>
+    <label for="tint4">TInt 4</label><div class="valueBox" id="tint4"></div>
+    <label for="tint5">TInt 5</label><div class="valueBox" id="tint5"></div>
+    <label for="tint6">TInt 6</label><div class="valueBox" id="tint6"></div>
+    <label for="tint7">TInt 7</label><div class="valueBox" id="tint7"></div>
+    <label for="tint8">TInt 8</label><div class="valueBox" id="tint8"></div>
+    <label for="tint9">TInt 9</label><div class="valueBox" id="tint9"></div>
+  </div>
+
+  <h3>Floats</h3>
+  <div class="grid">
+    <label for="tfloat0">TFloat 0</label><div class="valueBox" id="tfloat0"></div>
+    <label for="tfloat1">TFloat 1</label><div class="valueBox" id="tfloat1"></div>
+    <label for="tfloat2">TFloat 2</label><div class="valueBox" id="tfloat2"></div>
+    <label for="tfloat3">TFloat 3</label><div class="valueBox" id="tfloat3"></div>
+    <label for="tfloat4">TFloat 4</label><div class="valueBox" id="tfloat4"></div>
+    <label for="tfloat5">TFloat 5</label><div class="valueBox" id="tfloat5"></div>
+    <label for="tfloat6">TFloat 6</label><div class="valueBox" id="tfloat6"></div>
+    <label for="tfloat7">TFloat 7</label><div class="valueBox" id="tfloat7"></div>
+    <label for="tfloat8">TFloat 8</label><div class="valueBox" id="tfloat8"></div>
+    <label for="tfloat9">TFloat 9</label><div class="valueBox" id="tfloat9"></div>
+  </div>
+
+  <h3>Strings</h3>
+  <div class="grid">
+    <label for="tstr0">TStr 0</label><div class="valueBox" id="tstr0"></div>
+    <label for="tstr1">TStr 1</label><div class="valueBox" id="tstr1"></div>
+    <label for="tstr2">TStr 2</label><div class="valueBox" id="tstr2"></div>
+    <label for="tstr3">TStr 3</label><div class="valueBox" id="tstr3"></div>
+    <label for="tstr4">TStr 4</label><div class="valueBox" id="tstr4"></div>
+    <label for="tstr5">TStr 5</label><div class="valueBox" id="tstr5"></div>
+    <label for="tstr6">TStr 6</label><div class="valueBox" id="tstr6"></div>
+    <label for="tstr7">TStr 7</label><div class="valueBox" id="tstr7"></div>
+    <label for="tstr8">TStr 8</label><div class="valueBox" id="tstr8"></div>
+    <label for="tstr9">TStr 9</label><div class="valueBox" id="tstr9"></div>
+  </div>
+
+  <h2>Status Frame</h2>
+
+<div class="grid">
+  <label for="st_unix">Unix Time</label><div class="valueBox" id="st_unix"></div>
+  <label for="st_uptime">Uptime (ms)</label><div class="valueBox" id="st_uptime"></div>
+  <label for="st_latency">Latency (ms)</label><div class="valueBox" id="st_latency"></div>
+  <label for="st_counter">Packet Counter</label><div class="valueBox" id="st_counter"></div>
+
+  <label for="st_lcage">Last Control Age</label><div class="valueBox" id="st_lcage"></div>
+  <label for="st_tlage">Last Telemetry Age</label><div class="valueBox" id="st_tlage"></div>
+
+  <label for="st_loop">Loop Rate (Hz)</label><div class="valueBox" id="st_loop"></div>
+  <label for="st_ram">Free RAM</label><div class="valueBox" id="st_ram"></div>
+
+  <label for="st_err">Error Flags</label><div class="valueBox" id="st_err"></div>
+  <label for="st_fw">FW Version</label><div class="valueBox" id="st_fw"></div>
+
+  <label for="st_conn">Connection OK</label><div class="valueBox" id="st_conn"></div>
+  <label for="st_rtc">RTC OK</label><div class="valueBox" id="st_rtc"></div>
+  <label for="st_eth">Ethernet OK</label><div class="valueBox" id="st_eth"></div>
+  <label for="st_wifi">WiFi OK</label><div class="valueBox" id="st_wifi"></div>
+  <label for="st_sd">SD Logging OK</label><div class="valueBox" id="st_sd"></div>
+
+  <label for="st_node">Node ID</label><div class="valueBox" id="st_node"></div>
+  <label for="st_cpu">CPU Temp (°C)</label><div class="valueBox" id="st_cpu"></div>
+  <label for="st_sync">Time Sync Needed</label><div class="valueBox" id="st_sync"></div>
+
+  <label for="st_batt">Battery (mV)</label><div class="valueBox" id="st_batt"></div>
+</div>
+
+</div>
+
+<!-- ============================================================
+     CONTROL (RIGHT)
+============================================================ -->
+<div class="panel">
+  <h2>Control (first 10)</h2>
+
+  <h3>Bools</h3>
+  <div class="grid">
+    <label for="bool0">Bool 0</label><input type="checkbox" id="bool0">
+    <label for="bool1">Bool 1</label><input type="checkbox" id="bool1">
+    <label for="bool2">Bool 2</label><input type="checkbox" id="bool2">
+    <label for="bool3">Bool 3</label><input type="checkbox" id="bool3">
+    <label for="bool4">Bool 4</label><input type="checkbox" id="bool4">
+    <label for="bool5">Bool 5</label><input type="checkbox" id="bool5">
+    <label for="bool6">Bool 6</label><input type="checkbox" id="bool6">
+    <label for="bool7">Bool 7</label><input type="checkbox" id="bool7">
+    <label for="bool8">Bool 8</label><input type="checkbox" id="bool8">
+    <label for="bool9">Bool 9</label><input type="checkbox" id="bool9">
+  </div>
+
+  <h3>Ints</h3>
+  <div class="grid">
+    <label for="int0">Int 0</label><input type="number" id="int0">
+    <label for="int1">Int 1</label><input type="number" id="int1">
+    <label for="int2">Int 2</label><input type="number" id="int2">
+    <label for="int3">Int 3</label><input type="number" id="int3">
+    <label for="int4">Int 4</label><input type="number" id="int4">
+    <label for="int5">Int 5</label><input type="number" id="int5">
+    <label for="int6">Int 6</label><input type="number" id="int6">
+    <label for="int7">Int 7</label><input type="number" id="int7">
+    <label for="int8">Int 8</label><input type="number" id="int8">
+    <label for="int9">Int 9</label><input type="number" id="int9">
+  </div>
+
+  <h3>Floats</h3>
+  <div class="grid">
+    <label for="float0">Float 0</label><input type="number" step="0.01" id="float0">
+    <label for="float1">Float 1</label><input type="number" step="0.01" id="float1">
+    <label for="float2">Float 2</label><input type="number" step="0.01" id="float2">
+    <label for="float3">Float 3</label><input type="number" step="0.01" id="float3">
+    <label for="float4">Float 4</label><input type="number" step="0.01" id="float4">
+    <label for="float5">Float 5</label><input type="number" step="0.01" id="float5">
+    <label for="float6">Float 6</label><input type="number" step="0.01" id="float6">
+    <label for="float7">Float 7</label><input type="number" step="0.01" id="float7">
+    <label for="float8">Float 8</label><input type="number" step="0.01" id="float8">
+    <label for="float9">Float 9</label><input type="number" step="0.01" id="float9">
+  </div>
+
+  <h3>Strings</h3>
+  <div class="grid">
+    <label for="str0">Str 0</label><input type="text" id="str0">
+    <label for="str1">Str 1</label><input type="text" id="str1">
+    <label for="str2">Str 2</label><input type="text" id="str2">
+    <label for="str3">Str 3</label><input type="text" id="str3">
+    <label for="str4">Str 4</label><input type="text" id="str4">
+    <label for="str5">Str 5</label><input type="text" id="str5">
+    <label for="str6">Str 6</label><input type="text" id="str6">
+    <label for="str7">Str 7</label><input type="text" id="str7">
+    <label for="str8">Str 8</label><input type="text" id="str8">
+    <label for="str9">Str 9</label><input type="text" id="str9">
+  </div>
+
+  <button onclick="sendControl()">Send Control</button>
+</div>
+
+</div> <!-- end container -->
+
+<script>
+// ============================================================
+// WEBSOCKET DIAGNOSTICS
+// ============================================================
+let ws = new WebSocket("ws://localhost:8080");   // <-- change to your IP if needed
+ws.binaryType = "arraybuffer";
+
+ws.onopen = () => {
+    console.log("WS connected");
+    const s = document.getElementById("wsStatus");
+    if (s) s.textContent = "WS: Connected";
+};
+
+ws.onerror = (e) => {
+    console.log("WS error:", e);
+    const s = document.getElementById("wsStatus");
+    if (s) s.textContent = "WS: Error";
+};
+
+ws.onclose = () => {
+    console.log("WS closed");
+    const s = document.getElementById("wsStatus");
+    if (s) s.textContent = "WS: Closed";
+};
+
+ws.onmessage = (ev) => {
+    console.log("\n=== WS RX ===");
+    console.log("Raw event:", ev.data);
+
+    let buf = new Uint8Array(ev.data);
+    console.log("Packet type:", buf[0], "Length:", buf.length);
+
+    switch (buf[0]) {
+        case 0: parseTelemBool(buf);  break;
+        case 1: parseTelemInt(buf);   break;
+        case 2: parseTelemFloat(buf); break;
+        case 3: parseTelemString(buf);break;
+        case 4: parseStatus(buf);     break;
+        default:
+            console.log("Unknown packet type:", buf[0]);
+    }
+};
+
+// ============================================================
+// SEND CONTROL
+// ============================================================
+function sendControl() {
+    const obj = {
+        bools:   [],
+        ints:    [],
+        floats:  [],
+        strings: [],
+        status: {
+            unix_sec: Math.floor(Date.now() / 1000),
+            syncTime: false,
+            node_id:  1
+        }
+    };
+
+    for (let i = 0; i < 10; i++) {
+        obj.bools.push(document.getElementById("bool"+i).checked);
+        obj.ints.push(parseInt(document.getElementById("int"+i).value || 0));
+        obj.floats.push(parseFloat(document.getElementById("float"+i).value || 0));
+        obj.strings.push(document.getElementById("str"+i).value || "");
+    }
+
+    console.log("\n=== WS TX ===");
+    console.log(obj);
+
+    ws.send(JSON.stringify(obj));
+}
+
+// ============================================================
+// TELEMETRY PARSERS (with debug logging)
+// ============================================================
+function parseTelemBool(buf) {
+    console.log("parseTelemBool:", buf);
+    for (let i = 0; i < 10; i++) {
+        const el = document.getElementById("tbool"+i);
+        if (el) el.textContent = buf[2+i];
+    }
+}
+
+function parseTelemInt(buf) {
+    console.log("parseTelemInt:", buf);
+    let dv = new DataView(buf.buffer);
+    let idx = 2;
+    for (let i = 0; i < 10; i++) {
+        let v = dv.getInt32(idx, true);
+        idx += 4;
+        const el = document.getElementById("tint"+i);
+        if (el) el.textContent = v;
+    }
+}
+
+function parseTelemFloat(buf) {
+    console.log("parseTelemFloat:", buf);
+    let dv = new DataView(buf.buffer);
+    let idx = 2;
+    for (let i = 0; i < 10; i++) {
+        let v = dv.getFloat32(idx, true);
+        idx += 4;
+        const el = document.getElementById("tfloat"+i);
+        if (el) el.textContent = v.toFixed(3);
+    }
+}
+
+function parseTelemString(buf) {
+    console.log("parseTelemString:", buf);
+    let idx = 2;
+    for (let i = 0; i < 10; i++) {
+        let slice = buf.slice(idx, idx+32);
+        idx += 32;
+        let str = new TextDecoder().decode(slice).replace(/\0/g, "");
+        const el = document.getElementById("tstr"+i);
+        if (el) el.textContent = str;
+    }
+}
+
+// ============================================================
+// STATUS PARSER
+// ============================================================
+function parseStatus(buf) {
+    console.log("parseStatus:", buf);
+
+    let dv = new DataView(buf.buffer);
+    let idx = 1;
+
+    let unix_sec   = dv.getUint32(idx, true); idx += 4;
+    let uptime_ms  = dv.getUint32(idx, true); idx += 4;
+    let latency_ms = dv.getUint16(idx, true); idx += 2;
+    let counter    = dv.getUint32(idx, true); idx += 4;
+
+    let lc_age = dv.getUint32(idx, true); idx += 4;
+    let tl_age = dv.getUint32(idx, true); idx += 4;
+
+    let loop_hz = dv.getUint16(idx, true); idx += 2;
+    let ram     = dv.getUint16(idx, true); idx += 2;
+
+    let err     = dv.getUint16(idx, true); idx += 2;
+    let fw_ver  = dv.getUint16(idx, true); idx += 2;
+
+    let conn = buf[idx++];
+    let rtc  = buf[idx++];
+    let eth  = buf[idx++];
+    let wifi = buf[idx++];
+    let sd   = buf[idx++];
+    let node = buf[idx++];
+    let cpu  = buf[idx++];
+    let sync = buf[idx++];
+
+    let batt = dv.getUint16(idx, true); idx += 2;
+
+    let fw_str = new TextDecoder()
+        .decode(buf.slice(idx, idx + 16))
+        .replace(/\0/g, "");
+
+    setText("st_unix",    unix_sec);
+    setText("st_uptime",  uptime_ms);
+    setText("st_latency", latency_ms);
+    setText("st_counter", counter);
+
+    setText("st_lcage", lc_age);
+    setText("st_tlage", tl_age);
+
+    setText("st_loop", loop_hz);
+    setText("st_ram",  ram);
+
+    setText("st_err", err);
+    setText("st_fw",  fw_ver + " (" + fw_str + ")");
+
+    setText("st_conn", conn);
+    setText("st_rtc",  rtc);
+    setText("st_eth",  eth);
+    setText("st_wifi", wifi);
+    setText("st_sd",   sd);
+
+    setText("st_node", node);
+    setText("st_cpu",  cpu);
+    setText("st_sync", sync);
+
+    setText("st_batt", batt);
+}
+
+function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+</script>
+
+</body>
+</html>

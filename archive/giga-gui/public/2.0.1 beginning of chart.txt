@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GIGA Instrument Panel</title>
+
+    <style>
+        body {
+            background: #111;
+            color: #ddd;
+            font-family: "Bahnschrift", "DIN Alternate", sans-serif;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-top: 0;
+            margin-bottom: 4px;
+        }
+
+        h2 {
+            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+
+        .names-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background: #222;
+            color: #ddd;
+            border: 1px solid #444;
+            padding: 8px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #333;
+        }
+
+        /* Two-column layout (bools left, strings right) */
+        .main-columns {
+            display: flex;
+            width: 100%;
+            margin-top: 0;
+        }
+
+        .left-panel {
+            width: 50%;
+        }
+
+        .right-panel {
+            width: 50%;
+        }
+
+        /* Bool grid */
+        .bool-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px 20px;
+            margin-top: 0;
+        }
+
+        .bool-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 0;
+        }
+
+        .bool-label {
+            width: 120px;
+            font-size: 14px;
+            color: #ddd;
+            background: #222;
+            border: 1px solid #444;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+
+        .led {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            background: #222;
+            border: 2px solid #444;
+            box-shadow: inset 0 0 6px #000;
+            transition: background 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .led.on {
+            background: #0f0;
+            border-color: #6f6;
+            box-shadow: 0 0 8px #0f0;
+        }
+
+        /* String panel */
+        .string-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .string-label {
+            width: 120px;
+            font-size: 14px;
+            color: #ddd;
+            background: #222;
+            border: 1px solid #444;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+
+        .string-value {
+            width: 100ch;
+            font-size: 14px;
+            color: #ddd;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+
+        /* Numeric columns wrapper */
+        .numeric-columns {
+            display: flex;
+            width: 100%;
+            margin-top: 10px;
+            gap: 20px;
+            justify-content: flex-start;
+        }
+
+        .numeric-panel {
+            width: 25%;
+        }
+
+        /* Updated grid layout for header + rows (7 columns) */
+        .numeric-header,
+        .numeric-row {
+            display: grid;
+            grid-template-columns:
+                20px   /* LED */
+                28px   /* L/R */
+                110px  /* Name */
+                70px   /* Raw */
+                70px   /* EU */
+                60px   /* Slope */
+                60px;  /* Offset */
+            gap: 6px;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .numeric-row {
+            color: inherit;
+        }
+
+        /* Numeric inputs */
+        .numeric-name,
+        .numeric-raw,
+        .numeric-eu,
+        .numeric-slope,
+        .numeric-offset {
+            font-size: 14px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #222;
+            color: #ddd;
+        }
+
+        .numeric-raw {
+            background: #1a1a1a;
+            color: #777;
+        }
+
+        .numeric-eu {
+            background: #1a1a1a;
+            color: #ddd;
+            font-weight: bold;
+        }
+
+        /* Chart enable LED for numeric rows */
+        .chart-led {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            background: #222;
+            border: 2px solid #444;
+            cursor: pointer;
+            box-shadow: inset 0 0 6px #000;
+        }
+
+        .chart-led.on {
+            background: rgb(141, 2, 2);
+            border-color: rgb(124, 48, 48);
+            box-shadow: 0 0 10px rgb(114, 1, 1);
+        }
+
+        /* Axis selector button */
+        .axis-btn {
+            width: 28px;
+            height: 24px;
+            background: #222;
+            color: #ddd;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-align: center;
+            padding: 0;
+        }
+
+        .axis-btn:hover {
+            background: #333;
+        }
+
+        /* Active channels panel */
+        .active-channels-panel {
+            width: 25%;
+            margin-left: 20px;
+        }
+
+        .active-channel-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .active-color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+
+        /* Chart canvas */
+        #scopeCanvas {
+            width: 100%;
+            height: 300px;
+            background: #111;
+            border: 1px solid #444;
+            border-radius: 4px;
+        }
+
+        /* Chart tabs + timebase */
+        .chart-tabs {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+            margin-bottom: 6px;
+        }
+
+        .chart-tab {
+            padding: 6px 14px;
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #ccc;
+        }
+
+        .chart-tab.active {
+            background: #333;
+            color: #fff;
+        }
+
+        .timebase-select {
+            margin-left: auto;
+            background: #222;
+            color: #ddd;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 14px;
+        }
+
+        .chart-panel {
+            margin-top: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>GIGA Instrument Panel</h1>
+
+    <div class="names-controls">
+        <button id="saveNames">Save Names</button>
+        <button id="saveOffsets">Save Offsets</button>
+        <input type="file" id="loadFile" style="display:none;">
+        <button id="loadFileBtn">Load File</button>
+    </div>
+
+    <div class="main-columns">
+        <div class="left-panel">
+            <h2>Boolean Indicators</h2>
+            <div id="boolGrid" class="bool-grid"></div>
+        </div>
+
+        <div class="right-panel">
+            <h2>String Values</h2>
+            <div id="stringPanel"></div>
+        </div>
+    </div>
+
+    <!-- Chart tabs + timebase -->
+    <div class="chart-tabs">
+        <div class="chart-tab active" data-target="numeric">Numeric Data</div>
+        <div class="chart-tab" data-target="chart">Chart ▼</div>
+
+        <select id="timebase" class="timebase-select">
+            <option value="1">1s</option>
+            <option value="2">2s</option>
+            <option value="5">5s</option>
+            <option value="10">10s</option>
+            <option value="20" selected>20s</option>
+        </select>
+    </div>
+
+    <!-- Numeric columns wrapper -->
+    <div class="numeric-columns">
+
+        <div class="numeric-panel">
+            <h2>Doubles</h2>
+            <div class="numeric-header">
+                <div class="col-chart"></div>
+                <div class="col-axis"></div>
+                <div class="col-name">Name</div>
+                <div class="col-raw">Raw</div>
+                <div class="col-eu">EU</div>
+                <div class="col-slope">Slope</div>
+                <div class="col-offset">Offset</div>
+            </div>
+            <div id="doublePanel"></div>
+        </div>
+
+        <div class="numeric-panel">
+            <h2>Floats</h2>
+            <div class="numeric-header">
+                <div class="col-chart"></div>
+                <div class="col-axis"></div>
+                <div class="col-name">Name</div>
+                <div class="col-raw">Raw</div>
+                <div class="col-eu">EU</div>
+                <div class="col-slope">Slope</div>
+                <div class="col-offset">Offset</div>
+            </div>
+            <div id="floatPanel"></div>
+        </div>
+
+        <div class="numeric-panel">
+            <h2>Ints</h2>
+            <div class="numeric-header">
+                <div class="col-chart"></div>
+                <div class="col-axis"></div>
+                <div class="col-name">Name</div>
+                <div class="col-raw">Raw</div>
+                <div class="col-eu">EU</div>
+                <div class="col-slope">Slope</div>
+                <div class="col-offset">Offset</div>
+            </div>
+            <div id="intPanel"></div>
+        </div>
+
+        <div class="active-channels-panel">
+            <h2>Active Channels</h2>
+            <div id="activeChannelList"></div>
+        </div>
+    </div>
+
+    <!-- Chart panel (hidden by default) -->
+    <div id="chartPanel" class="chart-panel hidden">
+        <canvas id="scopeCanvas" width="1200" height="300"></canvas>
+    </div>
+
+    <script>
+        const ws = new WebSocket("ws://localhost:8080");
+
+        ws.onopen = () => console.log("WebSocket connected");
+        ws.onerror = (err) => console.log("WebSocket error:", err);
+
+        const boolGrid = document.getElementById("boolGrid");
+        const boolElements = [];
+        const nameInputs = [];
+
+        for (let i = 0; i < 32; i++) {
+            const item = document.createElement("div");
+            item.className = "bool-item";
+
+            const label = document.createElement("input");
+            label.className = "bool-label";
+            label.type = "text";
+            label.value = "Bool " + i;
+            label.dataset.index = i;
+
+            const led = document.createElement("div");
+            led.className = "led";
+
+            item.appendChild(label);
+            item.appendChild(led);
+            boolGrid.appendChild(item);
+
+            boolElements.push(led);
+            nameInputs.push(label);
+        }
+
+        const stringPanel = document.getElementById("stringPanel");
+        const stringLabels = [];
+        const stringValues = [];
+
+        const STRING_COUNT = 8;
+
+        for (let i = 0; i < STRING_COUNT; i++) {
+            const row = document.createElement("div");
+            row.className = "string-row";
+
+            const label = document.createElement("input");
+            label.className = "string-label";
+            label.type = "text";
+            label.value = "String " + i;
+            label.dataset.index = i;
+
+            const value = document.createElement("input");
+            value.className = "string-value";
+            value.type = "text";
+            value.readOnly = true;
+
+            row.appendChild(label);
+            row.appendChild(value);
+            stringPanel.appendChild(row);
+
+            stringLabels.push(label);
+            stringValues.push(value);
+        }
+
+        const DOUBLE_COUNT = 16;
+        const FLOAT_COUNT = 16;
+        const INT_COUNT = 16;
+
+        function createNumericRow(index, panelElement, arrays) {
+            const row = document.createElement("div");
+            row.className = "numeric-row";
+
+            const chartLed = document.createElement("div");
+            chartLed.className = "chart-led";
+            chartLed.dataset.enabled = "0";
+            chartLed.onclick = () => {
+                const enabled = chartLed.dataset.enabled === "1";
+                chartLed.dataset.enabled = enabled ? "0" : "1";
+                chartLed.classList.toggle("on", !enabled);
+                updateActiveChannelList();
+            };
+
+            const axisBtn = document.createElement("button");
+            axisBtn.className = "axis-btn";
+            axisBtn.textContent = "L";
+            axisBtn.dataset.axis = "L";
+            axisBtn.onclick = () => {
+                axisBtn.dataset.axis = axisBtn.dataset.axis === "L" ? "R" : "L";
+                axisBtn.textContent = axisBtn.dataset.axis;
+                updateActiveChannelList();
+            };
+
+            const name = document.createElement("input");
+            name.className = "numeric-name";
+            name.type = "text";
+            name.value = `${arrays.labelPrefix} ${index}`;
+
+            const raw = document.createElement("input");
+            raw.className = "numeric-raw";
+            raw.type = "text";
+            raw.readOnly = true;
+
+            const eu = document.createElement("input");
+            eu.className = "numeric-eu";
+            eu.type = "text";
+            eu.readOnly = true;
+
+            const slope = document.createElement("input");
+            slope.className = "numeric-slope";
+            slope.type = "number";
+            slope.value = "1.0";
+
+            const offset = document.createElement("input");
+            offset.className = "numeric-offset";
+            offset.type = "number";
+            offset.value = "0.0";
+
+            row.appendChild(chartLed);
+            row.appendChild(axisBtn);
+            row.appendChild(name);
+            row.appendChild(raw);
+            row.appendChild(eu);
+            row.appendChild(slope);
+            row.appendChild(offset);
+
+            panelElement.appendChild(row);
+
+            arrays.chartLeds.push(chartLed);
+            arrays.axisBtns.push(axisBtn);
+            arrays.names.push(name);
+            arrays.raws.push(raw);
+            arrays.eus.push(eu);
+            arrays.slopes.push(slope);
+            arrays.offsets.push(offset);
+        }
+
+        const doubles = {
+            names: [], raws: [], eus: [], slopes: [], offsets: [],
+            chartLeds: [], axisBtns: [], labelPrefix: "Double"
+        };
+        const floats = {
+            names: [], raws: [], eus: [], slopes: [], offsets: [],
+            chartLeds: [], axisBtns: [], labelPrefix: "Float"
+        };
+        const ints = {
+            names: [], raws: [], eus: [], slopes: [], offsets: [],
+            chartLeds: [], axisBtns: [], labelPrefix: "Int"
+        };
+
+        const doublePanel = document.getElementById("doublePanel");
+        for (let i = 0; i < DOUBLE_COUNT; i++) {
+            createNumericRow(i, doublePanel, doubles);
+        }
+
+        const floatPanel = document.getElementById("floatPanel");
+        for (let i = 0; i < FLOAT_COUNT; i++) {
+            createNumericRow(i, floatPanel, floats);
+        }
+
+        const intPanel = document.getElementById("intPanel");
+        for (let i = 0; i < INT_COUNT; i++) {
+            createNumericRow(i, intPanel, ints);
+        }
+
+        function getChannelColor(type, index) {
+            const palette = [
+                "#0ff", "#f0f", "#ff0", "#0f0",
+                "#f80", "#08f", "#f44", "#4f4"
+            ];
+            return palette[index % palette.length];
+        }
+
+        function updateActiveChannelList() {
+            const list = document.getElementById("activeChannelList");
+            if (!list) return;
+
+            list.innerHTML = "";
+
+            const all = [
+                { type: "Double", arr: doubles },
+                { type: "Float", arr: floats },
+                { type: "Int", arr: ints }
+            ];
+
+            all.forEach(group => {
+                group.arr.chartLeds.forEach((led, i) => {
+                    if (led.dataset.enabled === "1") {
+                        const item = document.createElement("div");
+                        item.className = "active-channel-item";
+
+                        const colorBox = document.createElement("div");
+                        colorBox.className = "active-color-box";
+                        colorBox.style.background = getChannelColor(group.type, i);
+
+                        const label = document.createElement("div");
+                        label.textContent = `${group.type} ${i} (${group.arr.axisBtns[i].dataset.axis})`;
+
+                        item.appendChild(colorBox);
+                        item.appendChild(label);
+                        list.appendChild(item);
+                    }
+                });
+            });
+        }
+
+        const CHART_HISTORY = 600;
+        let SAMPLE_RATE = 50; // adjust to your actual stream rate
+
+        const chartData = {
+            doubles: [],
+            floats: [],
+            ints: []
+        };
+
+        function initChartBuffers() {
+            for (let i = 0; i < DOUBLE_COUNT; i++) {
+                chartData.doubles[i] = new Array(CHART_HISTORY).fill(null);
+            }
+            for (let i = 0; i < FLOAT_COUNT; i++) {
+                chartData.floats[i] = new Array(CHART_HISTORY).fill(null);
+            }
+            for (let i = 0; i < INT_COUNT; i++) {
+                chartData.ints[i] = new Array(CHART_HISTORY).fill(null);
+            }
+        }
+
+        initChartBuffers();
+
+        const scopeCanvas = document.getElementById("scopeCanvas");
+        let scopeCtx = null;
+        if (scopeCanvas) {
+            scopeCtx = scopeCanvas.getContext("2d");
+        }
+
+        function yLeft(value) {
+            if (!scopeCanvas) return 0;
+            const h = scopeCanvas.height;
+            return h - (value * 2);
+        }
+
+        function yRight(value) {
+            if (!scopeCanvas) return 0;
+            const h = scopeCanvas.height;
+            return h - (value * 2);
+        }
+
+        function drawGrid(ctx) {
+            if (!scopeCanvas) return;
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 1;
+
+            for (let x = 0; x < scopeCanvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, scopeCanvas.height);
+                ctx.stroke();
+            }
+
+            for (let y = 0; y < scopeCanvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(scopeCanvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        function pushSample(buffer, eu) {
+            if (buffer.every(v => v === null)) {
+                buffer.fill(eu);
+                return;
+            }
+            buffer.shift();
+            buffer.push(eu);
+        }
+
+        function drawChannel(ctx, buffer, color, axis, startIndex, samplesToShow) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            let first = true;
+
+            for (let x = 0; x < samplesToShow; x++) {
+                const bufIndex = startIndex + x;
+                const v = buffer[bufIndex];
+                if (v == null) continue;
+
+                const y = axis === "L" ? yLeft(v) : yRight(v);
+
+                if (first) {
+                    ctx.moveTo(x, y);
+                    first = false;
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+
+            ctx.stroke();
+        }
+
+        function drawChannels(ctx, startIndex, samplesToShow) {
+            const groups = [
+                { type: "Double", arr: doubles, data: chartData.doubles },
+                { type: "Float", arr: floats, data: chartData.floats },
+                { type: "Int", arr: ints, data: chartData.ints }
+            ];
+
+            groups.forEach(group => {
+                group.arr.chartLeds.forEach((led, i) => {
+                    if (led.dataset.enabled !== "1") return;
+
+                    const axis = group.arr.axisBtns[i].dataset.axis;
+                    const color = getChannelColor(group.type, i);
+                    const buffer = group.data[i];
+
+                    drawChannel(ctx, buffer, color, axis, startIndex, samplesToShow);
+                });
+            });
+        }
+
+        function renderChart() {
+            if (!scopeCanvas || !scopeCtx) return;
+
+            scopeCtx.fillStyle = "#111";
+            scopeCtx.fillRect(0, 0, scopeCanvas.width, scopeCanvas.height);
+
+            drawGrid(scopeCtx);
+
+            const timebaseElement = document.getElementById("timebase");
+            const timebaseSec = timebaseElement ? parseFloat(timebaseElement.value) : 20;
+
+            const samplesToShow = Math.min(
+                Math.floor(timebaseSec * SAMPLE_RATE),
+                CHART_HISTORY
+            );
+
+            const startIndex = CHART_HISTORY - samplesToShow;
+
+            drawChannels(scopeCtx, startIndex, samplesToShow);
+        }
+
+        setInterval(renderChart, 33);
+
+        const chartTabs = document.querySelectorAll(".chart-tab");
+        if (chartTabs.length > 0) {
+            chartTabs.forEach(tab => {
+                tab.addEventListener("click", () => {
+                    chartTabs.forEach(t => t.classList.remove("active"));
+                    tab.classList.add("active");
+
+                    const target = tab.dataset.target;
+                    const chartPanel = document.getElementById("chartPanel");
+                    const numericColumns = document.querySelector(".numeric-columns");
+
+                    if (target === "chart") {
+                        if (chartPanel) chartPanel.classList.remove("hidden");
+                        if (numericColumns) numericColumns.classList.add("hidden");
+                    } else {
+                        if (chartPanel) chartPanel.classList.add("hidden");
+                        if (numericColumns) numericColumns.classList.remove("hidden");
+                    }
+                });
+            });
+        }
+
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+
+            if (msg.type === "arduino") {
+                const bools = msg.data.bools;
+                for (let i = 0; i < 32; i++) {
+                    if (bools[i]) {
+                        boolElements[i].classList.add("on");
+                    } else {
+                        boolElements[i].classList.remove("on");
+                    }
+                }
+
+                if (msg.data.strings) {
+                    msg.data.strings.forEach((str, i) => {
+                        if (stringValues[i]) {
+                            stringValues[i].value = str;
+                        }
+                    });
+                }
+            }
+
+            if (msg.data.doubles) {
+                msg.data.doubles.forEach((value, i) => {
+                    if (doubles.raws[i]) {
+                        doubles.raws[i].value = value;
+                        const slope = parseFloat(doubles.slopes[i].value);
+                        const offset = parseFloat(doubles.offsets[i].value);
+                        const eu = value * slope + offset;
+                        doubles.eus[i].value = eu.toFixed(3);
+
+                        if (chartData.doubles[i]) {
+                            pushSample(chartData.doubles[i], eu);
+                        }
+                    }
+                });
+            }
+
+            if (msg.data.floats) {
+                msg.data.floats.forEach((value, i) => {
+                    if (floats.raws[i]) {
+                        floats.raws[i].value = value;
+                        const slope = parseFloat(floats.slopes[i].value);
+                        const offset = parseFloat(floats.offsets[i].value);
+                        const eu = value * slope + offset;
+                        floats.eus[i].value = eu.toFixed(3);
+
+                        if (chartData.floats[i]) {
+                            pushSample(chartData.floats[i], eu);
+                        }
+                    }
+                });
+            }
+
+            if (msg.data.ints) {
+                msg.data.ints.forEach((value, i) => {
+                    if (ints.raws[i]) {
+                        ints.raws[i].value = value;
+                        const slope = parseFloat(ints.slopes[i].value);
+                        const offset = parseFloat(ints.offsets[i].value);
+                        const eu = value * slope + offset;
+                        ints.eus[i].value = eu.toFixed(3);
+
+                        if (chartData.ints[i]) {
+                            pushSample(chartData.ints[i], eu);
+                        }
+                    }
+                });
+            }
+        };
+
+        updateActiveChannelList();
+    </script>
+</body>
+</html>

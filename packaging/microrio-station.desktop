@@ -1,0 +1,20 @@
+[Desktop Entry]
+Type=Application
+Name=MicroRIO Driver Station
+GenericName=Telemetry and Control
+Comment=Live telemetry, control and logging for MicroRIO nodes
+Exec=microrio-station
+Icon=microrio-station
+Terminal=false
+StartupNotify=true
+Categories=Development;Electronics;Engineering;
+Keywords=microrio;telemetry;robot;driver station;arduino;serial;udp;
+Actions=Chart;Joystick;
+
+[Desktop Action Chart]
+Name=Open on the chart
+Exec=microrio-station --tab chart
+
+[Desktop Action Joystick]
+Name=Check a controller
+Exec=microrio-station --tab joystick
