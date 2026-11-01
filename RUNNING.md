@@ -2,7 +2,7 @@
 
 Two programs, same app:
 
-- `microrio-station` — Linux, runs on serverbox.
+- `microrio-station` — Linux, runs on the box with the boards.
 - `microrio-station.exe` — Windows, runs on your laptop. No installer, no
   dependencies; it is one file.
 
@@ -13,7 +13,7 @@ first. The joystick tab works with nothing attached but a controller.
 
 ## On the box
 
-Run in: box (yerkovich)
+Run in: the box
 ```
 ~/deliverables/microrio/microrio-station
 ```
@@ -32,8 +32,8 @@ Windows copy instead.
 
 ## On the laptop
 
-1. Open http://192.168.0.148:8000/deliverables/microrio in a browser and
-   download `microrio-station.exe`.
+1. Open the box's downloads page in a browser — port 8000,
+   `/deliverables/microrio` — and download `microrio-station.exe`.
 
 2. Double-click it.
 
@@ -197,7 +197,7 @@ entire file rather than a marked stretch.
 
 Or without opening the window at all:
 
-Run in: box (yerkovich)
+Run in: the box
 ```
 ~/deliverables/microrio/microrio-station export ~/.local/share/microrio/logs/<file>.mrlog
 ```
@@ -223,7 +223,7 @@ so you can read it, edit it, and copy it between the two machines.
 
 `MicroRIO-0.1.0.zip` is laid out so it drops straight into your sketchbook.
 
-Run in: box (yerkovich)
+Run in: the box
 ```
 unzip ~/deliverables/microrio/MicroRIO-0.1.0.zip -d ~/Arduino/libraries/
 ```
@@ -276,7 +276,7 @@ whichever you need.
 
 You can also start with one directly:
 
-Run in: box (yerkovich)
+Run in: the box
 ```
 ~/deliverables/microrio/microrio-station --profile ~/profiles/robot-a.toml
 ```
@@ -451,7 +451,7 @@ because the rest of them do.
 
 There is also a headless version, for when you are on ssh with no window:
 
-Run in: box (yerkovich)
+Run in: the box
 ```
 ~/deliverables/microrio/microrio-station joysticks 10
 ```
@@ -482,7 +482,7 @@ reducing full deflection, and **min**/**max** set the range the channel sees.
 
 ## Opening straight to a tab, or at a set size
 
-Run in: box (yerkovich)
+Run in: the box
 ```
 ~/deliverables/microrio/microrio-station --tab joystick
 ```
@@ -490,7 +490,7 @@ Run in: box (yerkovich)
 Opens on that tab instead of Operator. Also accepts `operator`, `charts`,
 `clock`, `logging`, `settings`.
 
-Run in: box (yerkovich)
+Run in: the box
 ```
 ~/deliverables/microrio/microrio-station --size 1920x1080
 ```
@@ -505,7 +505,7 @@ about to complain about.
 There is a headless probe that talks to a board directly and says exactly where
 it breaks — no window needed, so it works over ssh.
 
-Run in: box (yerkovich)
+Run in: the box
 ```
 cd ~/projects/microrio && cargo xtask probe 192.168.0.50
 ```
@@ -533,7 +533,7 @@ all of them at the board's end.
    board holding `Conformance.ino`, which speaks over USB and never touches
    the network. Reflash the node sketch and it comes straight back.
 
-Run in: box (yerkovich)
+Run in: the box
 ```
 cd ~/projects/microrio
 arduino-cli compile -b arduino:avr:mega --library arduino/MicroRIO \

@@ -1,7 +1,7 @@
-# MicroRIO — Hardware on serverbox
+# MicroRIO — Hardware on the development box
 
-*Surveyed 2026-10-24, updated after Darrel confirmed the Ethernet shield and swapped the
-ESP32's charge-only cable. Both boards are now present and flashable over USB.*
+*Surveyed 2026-10-24, updated after the Ethernet shield was confirmed and the
+ESP32's charge-only cable swapped. Both boards are now present and flashable over USB.*
 
 ---
 
@@ -14,7 +14,7 @@ ESP32's charge-only cable. Both boards are now present and flashable over USB.*
 | Signature | `0x1e9801` — ATmega2560, read via avrdude |
 | FQBN | `arduino:avr:mega` |
 | Memory | 8 KB SRAM, 254 KB usable flash |
-| Network | **Ethernet shield fitted** (confirmed by Darrel) |
+| Network | **Ethernet shield fitted** (confirmed by hand) |
 | Flash via | USB, `arduino-cli` / `avrdude` |
 
 Current firmware is a bare stub, not MicroRIO: prints `HELLO mega-testbed 1` at boot, answers
@@ -49,17 +49,17 @@ The earlier failure to detect it at all was the charge-only USB cable, now repla
 | `arduino:avr` core | **1.8.8 — installed** |
 | `Ethernet` library | **2.0.2 — installed** |
 | avrdude | 7.1 |
-| esptool | **5.6.0** — venv at `/tmp/claude-1000/-home-yerkovich-projects/b4ec845d-fe81-4d45-84a8-6923194b0f5c/scratchpad/esptool-venv/bin/esptool` |
+| esptool | **5.6.0** — in a scratch virtualenv |
 | `esp32:esp32` core | **not installed** — needed before the Olimex can be built. Large download; say the word. |
 | pyserial | 3.5 |
 
-`yerkovich` is in `dialout`; no sudo needed for either board.
+The build account is in `dialout`; no sudo needed for either board.
 
 ## Network
 
 `enp195s0` is up with gigabit carrier but holds only a link-local address
-(`169.254.167.135/16`) — no DHCP lease. serverbox's real address is on WiFi
-(`192.168.0.148`). Worth sorting before wired nodes go on that port, since the design uses
+(`169.254.167.135/16`) — no DHCP lease. the box's real address is on WiFi, on the
+same /24 as the boards. Worth sorting before wired nodes go on that port, since the design uses
 manual IP entry and assumes station and nodes share a subnet.
 
 ---
@@ -134,5 +134,5 @@ rather than months later when someone tries to deploy on one. Costs seconds per 
 
 ### 6. Flashing is USB for both boards, always
 
-Per Darrel. No OTA, no network bootloader in scope. `arduino-cli` for AVR, `esptool` for the
+Decided. No OTA, no network bootloader in scope. `arduino-cli` for AVR, `esptool` for the
 ESP32.

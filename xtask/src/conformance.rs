@@ -325,7 +325,7 @@ pub fn run(port_name: &str) -> Result<(), String> {
     );
 
     // The owner is told too: being fought over is the operator's business.
-    board.set_from("192.168.0.148", 5006)?;
+    board.set_from("192.168.0.100", 5006)?;
     board.send_control(&expected, &ctrl_layout, &mine)?;
     let owner_frame = board.fetch_telemetry(&telem_layout)?;
     t.check(
@@ -387,7 +387,7 @@ pub fn run(port_name: &str) -> Result<(), String> {
     let mut stop = watcher.clone();
     stop.state = State::Estop;
     board.send_control_collect(&expected, &ctrl_layout, &stop)?;
-    board.set_from("192.168.0.148", 5006)?;
+    board.set_from("192.168.0.100", 5006)?;
     board.send_control(&expected, &ctrl_layout, &mine)?;
     let vals = board.dump()?;
     t.check(
@@ -431,7 +431,7 @@ pub fn run(port_name: &str) -> Result<(), String> {
     // Ownership is symmetric: the first station gets it back the same way,
     // by being the one talking after the other has gone quiet.
     std::thread::sleep(Duration::from_millis(400));
-    board.set_from("192.168.0.148", 5006)?;
+    board.set_from("192.168.0.100", 5006)?;
     board.send_control(&expected, &ctrl_layout, &mine)?;
     let vals = board.dump()?;
     t.check(
@@ -847,7 +847,13 @@ impl Harness {
         // all. Forgetting that reads exactly like a broken station: every node
         // dark, every page waiting for a schema that cannot come. So say it
         // both ways round, pass or fail.
-        let restore = "This board now holds Conformance.ino, which does not touch the \n                         network. Reflash its node sketch before using it with the station:\n                         arduino-cli compile -b arduino:avr:mega --library arduino/MicroRIO \\\n                           -u -p <port> arduino/MicroRIO/examples/SimNode\n                         arduino/flash-wifi-node.sh <port>        # the ESP32";
+        let restore = concat!(
+            "This board now holds Conformance.ino, which does not touch the network.\n",
+            "  Reflash its node sketch before using it with the station:\n",
+            "    arduino-cli compile -b arduino:avr:mega --library arduino/MicroRIO \\\n",
+            "        -u -p <port> arduino/MicroRIO/examples/SimNode\n",
+            "    arduino/flash-wifi-node.sh <port>        # the ESP32",
+        );
         if self.failed.is_empty() {
             println!("{} checks passed.", self.passed);
             println!("\n  {restore}");

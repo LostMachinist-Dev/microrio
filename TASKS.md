@@ -5,7 +5,7 @@
 ## Done
 - Extracted and read the 2026 `TOE archive.zip`; wrote `MicroRIO-origins.md`.
 - Copied sources to `archive/`, redacted the hardcoded WiFi password.
-- Wrote `DESIGN.md`; revised to rev 2 after Darrel's review.
+- Wrote `DESIGN.md`; revised to rev 2 after review.
 - Surveyed hardware, measured real AVR memory budget — `HARDWARE.md`.
 - Renamed project and deliverables folder to `microrio`.
 - **All eight build steps from `DESIGN.md` §13, through to a board on Ethernet.**
@@ -44,7 +44,7 @@
   rx/tx symmetric with no loss, node obeys ENABLED, node faults itself when control
   stops. 6 probe checks pass (`cargo xtask probe 192.168.0.50`).
 - CSV export of a real 50 s session: 2500 rows = exactly 50 Hz, rectangular.
-- **Driving while ENABLED — confirmed by Darrel on 2026-10-25**, from the
+- **Driving while ENABLED — confirmed by hand on 2026-10-25**, from the
   Windows build: an output moves when enabled and does not when disabled.
 - 52 tests: 24 codec, 7 chart/history, 6 control-path, 4 logger/CSV, 7 mapping,
   4 device match.
@@ -118,7 +118,7 @@
   first.
 
 ## Operator revision (2026-10-25)
-From Darrel's review after driving a real output from the Windows build.
+From the operator's review after driving a real output from the Windows build.
 - **Layout built for two window shapes.** Side by side above 1180 px, stacked
   below it. The chart takes whatever height the grids do not need, measured
   from the last frame rather than a fixed fraction. `--size WxH` reproduces
@@ -235,7 +235,7 @@ From `MicroRIO-design.md` review, items 1-6.
   ESP32; verified live with two stations — commander 0.0% loss, watcher 0.1%.
 - **Done** — Windows installer built and tested under wine: silent install,
   four Start-menu shortcuts, the app runs, uninstaller removes everything.
-- **Next** — Darrel's fourth UI pass.
+- **Next** — the fourth UI pass.
 - **Next** — DESIGN.md: enable per node in sections 2/4, station speaks first
   (SCHEMA_REQ) in section 5, fold the appendix in, protocol v2. READMEs.
 - **Next** — Windows installer (needs `sudo apt install nsis`) and Linux .deb.

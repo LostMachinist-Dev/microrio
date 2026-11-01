@@ -1,7 +1,7 @@
 # MicroRIO — Design
 
 *Driver station in Rust, firmware library in Arduino C++.
-Revision 2, 2026-10-24, incorporating Darrel's review. Nothing built yet.*
+Revision 2, 2026-10-24, incorporating the operator's review. Nothing built yet.*
 
 Successor to the 2026 TOE project — see `MicroRIO-origins.md`.
 Hardware survey and measured memory budget in `HARDWARE.md`.
@@ -104,7 +104,7 @@ Keep string channels few. They're the only real waste.
 ## 4. Safety — UI loss is a fault
 
 **Changed in review.** Revision 1 said the UI was a pure subscriber and control continued
-without it. That was wrong for a driver station, and Darrel corrected it.
+without it. That was wrong for a driver station, and the operator said so.
 
 **Three independent paths into fault, all ending in neutral outputs:**
 
@@ -800,7 +800,7 @@ constraint it looks like.
 
 ### Operational note
 
-`ufw` is active on serverbox. The station works because it speaks first, so
+`ufw` is active on the machine the station runs on. The station works because it speaks first, so
 return telemetry matches an established flow. A node that sent telemetry
 unsolicited, before any control frame, would be dropped at the host firewall —
 which is a good reason the handshake starts from the station.
