@@ -32,8 +32,8 @@ Windows copy instead.
 
 ## On the laptop
 
-1. Open the box's downloads page in a browser — port 8000,
-   `/deliverables/microrio` — and download `microrio-station.exe`.
+1. Open http://192.168.0.148:8000/deliverables/microrio in a browser and
+   download `microrio-station.exe`.
 
 2. Double-click it.
 

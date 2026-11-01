@@ -343,7 +343,7 @@ cmd("cargo test --workspace\ncargo xtask probe 192.168.0.50 1")
 p("Tests first, then a real board. Stop the station before probing.")
 
 h("How do I download the builds?", 2)
-p("Open the box's downloads page on port 8000, /deliverables, in a browser\n  on the laptop.")
+p("Open http://192.168.0.148:8000/deliverables in a browser on the laptop.")
 
 h("I changed the protocol. What do I have to rebuild?", 2)
 cmd("cargo xtask gen-header\ncargo test --workspace")
