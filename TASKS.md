@@ -251,7 +251,7 @@ From `MicroRIO-design.md` review, items 1-6.
 - Windows: the `.exe` builds but has not been run on a Windows machine.
 
 ## Notes
-- **Published 2026-11-01** as two private repos in `LostMachinist-Dev`:
+- **Published 2026-11-01** as two public repos in `LostMachinist-Dev`:
   [microrio](https://github.com/LostMachinist-Dev/microrio) (station) and
   [microrio-arduino](https://github.com/LostMachinist-Dev/microrio-arduino) (the library).
   GitHub sees one root commit each: none of the working history is public. The full local

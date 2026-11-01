@@ -500,7 +500,7 @@ bullets([
 
 h("Published", 2)
 bullets([
-    "Two private repositories in LostMachinist-Dev, pushed on 1 November 2026: "
+    "Two public repositories in LostMachinist-Dev, pushed on 1 November 2026: "
     "microrio holds the station, the codec, the protocol spec, the library "
     "source and the docs; microrio-arduino holds the library at its own root, "
     "which is what the Arduino IDE needs in order to install it.",
